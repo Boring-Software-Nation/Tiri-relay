@@ -3,7 +3,7 @@ import { MikroORM } from '@mikro-orm/core';
 import { MikroOrmMiddleware, MikroOrmModule } from '@mikro-orm/nestjs';
 
 import { AppController } from './app.controller';
-
+import { ObjectsModule } from './objects/objects.module';
 import { UserModule } from './user/user.module';
 
 @Module({
@@ -12,6 +12,7 @@ import { UserModule } from './user/user.module';
   ],
   imports: [
     MikroOrmModule.forRoot(),
+    ObjectsModule,
     UserModule,
   ],
   providers: [],
