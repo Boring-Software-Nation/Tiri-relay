@@ -1,9 +1,24 @@
-import {Controller, Delete, Get, Headers, Param, Put, Query, UploadedFile, UseInterceptors, HttpException, HttpStatus} from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  Param,
+  Put,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+  HttpException,
+  HttpStatus,
+  Res
+} from '@nestjs/common';
 import {ApiBearerAuth, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {API_HOST} from '../config'
 import {api} from "../services";
 import {FileInterceptor} from "@nestjs/platform-express";
 import {ContentType} from "../services/api";
+import {Response} from "express";
+import {map} from "rxjs";
 
 @ApiBearerAuth()
 @ApiTags('objects')
@@ -17,21 +32,32 @@ export class ObjectsController {
   @ApiResponse({ status: 404, description: 'Not found.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @Get(':wallete')
-  async objectsDetail(@Param('wallete') wallete, @Headers() headers, @Query() query): Promise<any> {
-    console.log(headers)
+  async objectsDetail(@Param('wallete') wallete, @Headers() headers, @Query() query, @Res() res: Response): Promise<any> {
+    // console.log(headers)
     let path = wallete + (!query.path.startsWith('/') ? '/' : '') + query.path || '';
     if (query.pathType === 'dir' && query.path && !query.path.endsWith('/')) {
       path += '/';
     }
 
+    let serviceName = 'bus';
+    if (query.serviceName) {
+        serviceName = query.serviceName;
+    }
+
+    const params = {baseURL: `${API_HOST}/api/${serviceName}`};
+    if (query.format) {
+      params['format'] = query.format;
+    }
+
     let r;
     try {
-      r = await api.objects.objectsDetail(path, {baseURL: `${API_HOST}/api/bus`});
+      r = await api.objects.objectsDetail(path, params);
     } catch (error) {
         console.log('error', error)
         return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
     }
-    return {status: r.status, statusText: r.statusText, data: r.data};
+
+    res.status(r.status).send(r.data);
   }
 
   @ApiOperation({ summary: 'Update object' })
