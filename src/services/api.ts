@@ -275,7 +275,9 @@ export class HttpClient<SecurityDataType = unknown> {
     const responseFormat = format || this.format || undefined;
 
     if (type === ContentType.FormData && body && body !== null && typeof body === 'object') {
-      body = this.createFormData(body as Record<string, unknown>);
+        if (!(body instanceof Buffer)) {
+            body = this.createFormData(body as Record<string, unknown>);
+        }
     }
 
     if (type === ContentType.Text && body && body !== null && typeof body !== 'string') {
