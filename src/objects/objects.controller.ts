@@ -10,7 +10,7 @@ import {
   UseInterceptors,
   HttpException,
   HttpStatus,
-  Res
+  Res, Req
 } from '@nestjs/common';
 import {ApiBearerAuth, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
 import {API_HOST} from '../config'
@@ -31,10 +31,10 @@ export class ObjectsController {
   @ApiResponse({ status: 200, description: 'Get objects on path.' })
   @ApiResponse({ status: 404, description: 'Not found.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  @Get(':wallete')
-  async objectsDetail(@Param('wallete') wallete, @Headers() headers, @Query() query, @Res() res: Response): Promise<any> {
+  @Get(':wallet')
+  async objectsDetail(@Param('wallet') wallet, @Headers() headers, @Query() query, @Res() res: Response): Promise<any> {
     // console.log(headers)
-    let path = wallete + (!query.path.startsWith('/') ? '/' : '') + query.path || '';
+    let path = wallet + (!query.path.startsWith('/') ? '/' : '') + query.path || '';
     if (query.pathType === 'dir' && query.path && !query.path.endsWith('/')) {
       path += '/';
     }
@@ -63,44 +63,68 @@ export class ObjectsController {
   @ApiOperation({ summary: 'Update object' })
   @ApiResponse({ status: 201, description: 'The object has been successfully updated.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  @UseInterceptors(FileInterceptor('file'))
-  @Put(':wallete')
-  async update(@Param('wallete') wallete, @UploadedFile() file, @Query() query, @Headers() headers) {
+  // @UseInterceptors(FileInterceptor('file'))
+  @Put(':wallet')
+  async update(@Param('wallet') wallet, /*@UploadedFile() file,*/ @Req() req, @Query() query, @Res() res: Response) {
     let r;
-    try {
-      let path = wallete + (!query.path.startsWith('/') ? '/' : '') + query.path || '';
-      if (query.pathType === 'dir' && query.path && !query.path.endsWith('/')) {
-        path += '/';
+    let file = null;
+    let accumulatedData;
+    req.on('data', chunk => {
+      console.log(`Received ${chunk.length} bytes of data.`);
+      if (!accumulatedData) {
+        accumulatedData = chunk;
+      } else {
+        accumulatedData = Buffer.concat([accumulatedData, chunk]);
       }
-      let formData = null;
-      const headers = {
-        'Content-Type': file ? ContentType.FormData : ContentType.Text,
-      }
-      if (file) {
-        formData = Buffer.from(file.buffer)
-        headers['Content-Length'] = `${file.size}`
+    })
+    req.on('end', async () => {
+      // process the last bit of data in accumulatedData
+      console.log('end: accumulatedData length', accumulatedData.length)
+
+      try {
+        let path = wallet + (!query.path.startsWith('/') ? '/' : '') + query.path || '';
+        if (query.pathType === 'dir' && query.path && !query.path.endsWith('/')) {
+          path += '/';
+        }
+        let formData = null;
+        const headers = {
+          'Content-Type': file ? ContentType.FormData : ContentType.Text,
+        }
+        if (file) {
+          formData = Buffer.from(file.buffer)
+          headers['Content-Length'] = `${file.size}`
+        }
+
+        if (accumulatedData) {
+          formData = accumulatedData;
+          headers['Content-Length'] = `${formData.length}`
+        }
+
+        r = await api.objects.objectsUpdate(path, formData, {
+          baseURL: `${API_HOST}/api/worker`,
+          type: file || accumulatedData ? ContentType.FormData : ContentType.Text,
+          headers: headers
+        });
+        res.status(r.status);
+      } catch (error) {
+        console.log('error', error)
+        // return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+        res.status(error.response.status);
       }
 
-      r = await api.objects.objectsUpdate(path, formData, {
-        baseURL: `${API_HOST}/api/worker`,
-        type: file ? ContentType.FormData : ContentType.Text,
-        headers: headers
-      });
-    } catch (error) {
-      console.log('error', error)
-      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
-    }
-    return {status: r.status, statusText: r.statusText, data: r.data};
+      // return {status: r.status, statusText: r.statusText, data: r.data};
+    })
+
   }
 
   @ApiOperation({ summary: 'Delete object' })
   @ApiResponse({ status: 201, description: 'The object has been successfully deleted.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  @Delete(':wallete')
-  async delete(@Param('wallete') wallete, @Query() query) {
+  @Delete(':wallet')
+  async delete(@Param('wallet') wallet, @Query() query) {
     let r;
     try {
-      let path = wallete + '/' + query.path || '';
+      let path = wallet + '/' + query.path || '';
       if (query.pathType === 'dir' && query.path && !query.path.endsWith('/')) {
         path += '/';
       }

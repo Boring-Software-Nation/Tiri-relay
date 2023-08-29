@@ -24,3 +24,7 @@ src/config.ts
 # code testing coverage
 coverage
 .yarn
+
+test.crt
+test.key
+
