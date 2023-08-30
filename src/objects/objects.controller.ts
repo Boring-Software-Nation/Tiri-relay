@@ -112,11 +112,12 @@ export class ObjectsController {
           type: file || accumulatedData ? ContentType.FormData : ContentType.Text,
           headers: headers
         });
-        res.status(r.status);
+        console.log('Finished uploading file')
+        res.status(r.status).send();
       } catch (error) {
         console.log('error', error)
         // return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
-        res.status(error.response.status);
+        res.status(error.response.status).send();
       }
 
       // return {status: r.status, statusText: r.statusText, data: r.data};
