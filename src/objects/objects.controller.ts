@@ -45,8 +45,8 @@ export class ObjectsController {
     }
 
     const params = {baseURL: `${API_HOST}/api/${serviceName}`};
-    if (query.format) {
-      params['format'] = query.format;
+    if (query.format === 'blob') {
+       params['format'] = 'arraybuffer';
     }
 
     let r;
@@ -55,6 +55,12 @@ export class ObjectsController {
     } catch (error) {
         console.log('error', error)
         return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
+
+    if (query.format === 'blob') {
+      res.contentType('application/octet-stream');
+      res.status(r.status).send(r.data);
+      return;
     }
 
     res.status(r.status).send(r.data);
@@ -71,6 +77,7 @@ export class ObjectsController {
     let accumulatedData;
     req.on('data', chunk => {
       console.log(`Received ${chunk.length} bytes of data.`);
+      console.log(chunk)
       if (!accumulatedData) {
         accumulatedData = chunk;
       } else {

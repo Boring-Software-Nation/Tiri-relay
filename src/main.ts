@@ -25,9 +25,10 @@ async function bootstrap() {
   //
   // await app.listen(3000);
 
-
+  // Alternative to spdy server: https://docs.nestjs.com/faq/multiple-servers#multiple-simultaneous-servers
   const expressApp: Express = express();
 
+  // https://github.com/spdy-http2/node-spdy
   const spdyOpts: ServerOptions = {
     key: fs.readFileSync('./test.key'),
     cert: fs.readFileSync('./test.crt'),
