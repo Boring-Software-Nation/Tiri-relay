@@ -7,6 +7,9 @@ npm run start:dev
 npx swagger-typescript-api -p ./src/services/openapi.yml -o ./src/services -n api.ts --axios --extract-response-error --extract-request-body --extract-request-params
 ```
 
+- test.key
+- test.crt
+
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 -keyout test.key -out test.crt
 
