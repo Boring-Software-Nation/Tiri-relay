@@ -13,19 +13,20 @@ import {
   Res, Req
 } from '@nestjs/common';
 import {ApiBearerAuth, ApiOperation, ApiResponse, ApiTags} from '@nestjs/swagger';
-import {API_HOST} from '../config'
 import {api} from "../services";
 import {FileInterceptor} from "@nestjs/platform-express";
 import {ContentType} from "../services/api";
 import {Response} from "express";
-import {map} from "rxjs";
+import {ConfigService} from "@nestjs/config";
 
 @ApiBearerAuth()
 @ApiTags('objects')
 @Controller('objects')
 export class ObjectsController {
 
-  constructor() {}
+  constructor(
+      private configService: ConfigService
+  ) {}
 
   @ApiOperation({ summary: 'Get objects on path' })
   @ApiResponse({ status: 200, description: 'Get objects on path.' })
@@ -44,7 +45,7 @@ export class ObjectsController {
         serviceName = query.serviceName;
     }
 
-    const params = {baseURL: `${API_HOST}/api/${serviceName}`};
+    const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api/${serviceName}`};
     if (query.format === 'blob') {
        params['format'] = 'arraybuffer';
     }
@@ -108,7 +109,7 @@ export class ObjectsController {
         }
 
         r = await api.objects.objectsUpdate(path, formData, {
-          baseURL: `${API_HOST}/api/worker`,
+          baseURL: `${this.configService.get<string>('API_HOST')}/api/worker`,
           type: file || accumulatedData ? ContentType.FormData : ContentType.Text,
           headers: headers
         });
@@ -136,7 +137,7 @@ export class ObjectsController {
       if (query.pathType === 'dir' && query.path && !query.path.endsWith('/')) {
         path += '/';
       }
-      r = await api.objects.objectsDelete2(path,  {baseURL: `${API_HOST}/api/bus`});
+      r = await api.objects.objectsDelete2(path,  {baseURL: `${this.configService.get<string>('API_HOST')}/api/bus`});
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}

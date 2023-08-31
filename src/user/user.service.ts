@@ -3,17 +3,18 @@ import { validate } from 'class-validator';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { EntityManager, wrap } from '@mikro-orm/core';
-import { SECRET } from '../config';
 import { CreateUserDto, LoginUserDto, UpdateUserDto } from './dto';
 import { User } from './user.entity';
 import { IUserRO } from './user.interface';
 import { UserRepository } from './user.repository';
+import {ConfigService} from "@nestjs/config";
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly em: EntityManager,
+    private configService: ConfigService
   ) {}
 
   async findAll(): Promise<User[]> {
@@ -93,7 +94,7 @@ export class UserService {
       wallet: user.wallet,
       exp: exp.getTime() / 1000,
       id: user.id,
-    }, SECRET);
+    }, this.configService.get<string>('AUTH_SECRET'));
   }
 
   private buildUserRO(user: User) {

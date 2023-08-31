@@ -28,3 +28,7 @@ coverage
 test.crt
 test.key
 
+# local env files
+.env.local
+.env.*.local
+.env
