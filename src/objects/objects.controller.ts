@@ -78,7 +78,7 @@ export class ObjectsController {
     let accumulatedData;
     req.on('data', chunk => {
       console.log(`Received ${chunk.length} bytes of data.`);
-      console.log(chunk)
+      // console.log(chunk)
       if (!accumulatedData) {
         accumulatedData = chunk;
       } else {
@@ -87,7 +87,7 @@ export class ObjectsController {
     })
     req.on('end', async () => {
       // process the last bit of data in accumulatedData
-      console.log('end: accumulatedData length', accumulatedData.length)
+      // console.log('end: accumulatedData length', accumulatedData.length)
 
       try {
         let path = wallet + (!query.path.startsWith('/') ? '/' : '') + query.path || '';
@@ -114,14 +114,11 @@ export class ObjectsController {
           headers: headers
         });
         console.log('Finished uploading file')
-        res.status(r.status).send();
+        res.status(r.status).send(r.data);
       } catch (error) {
         console.log('error', error)
-        // return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
-        res.status(error.response.status).send();
+        res.status(error.response.status).send(error.response.data);
       }
-
-      // return {status: r.status, statusText: r.statusText, data: r.data};
     })
 
   }
