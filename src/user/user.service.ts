@@ -8,14 +8,36 @@ import { User } from './user.entity';
 import { IUserRO } from './user.interface';
 import { UserRepository } from './user.repository';
 import {ConfigService} from "@nestjs/config";
+import { encode as encodeB64 } from '@stablelib/base64';
+import { encode as encodeUTF8 } from '@stablelib/utf8';
+import { hash } from 'tweetnacl';
+
+/* global sia, Go */
+/* global WebAssembly */
+import '../sia/wasm_exec.js';
+import * as fs from "fs";
+import path from "path";
+
+declare const WebAssembly: any
+declare const Go: any
+declare const sia: any
 
 @Injectable()
 export class UserService {
+  scanQueue = [];
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly em: EntityManager,
-    private configService: ConfigService
-  ) {}
+    private configService: ConfigService,
+  ) {
+
+    const loaded = this.load().then(
+        () => {
+          console.log('wasm loaded');
+        }
+    );
+  }
 
   async findAll(): Promise<User[]> {
     return this.userRepository.findAll();
@@ -52,6 +74,13 @@ export class UserService {
         errors: { username: 'Userinput is not valid.' },
       }, HttpStatus.BAD_REQUEST);
     } else {
+      const seed = await this.createWallet();
+      const id = encodeB64(hash(encodeUTF8(seed as string)));
+      const addresses = await this.saveWallet(seed, 'sc');
+      user.pay_wallet_id = id;
+      user.pay_wallet_seed = seed as string;
+      user.pay_addresses = JSON.stringify(addresses);
+
       await this.em.persistAndFlush(user);
       return this.buildUserRO(user);
     }
@@ -105,4 +134,92 @@ export class UserService {
 
     return { user: userRO };
   }
+
+  private async createWallet() {
+    try {
+      const params: any[] = ['sia'];
+      const p = new Promise((resolve, reject) => {
+        const f = async (err, value) => {
+          if (err)
+            reject(new Error(err));
+          else if (value)
+            resolve(value);
+          else
+            resolve('');
+        }
+
+        params.push(f);
+      });
+
+      const error = sia['generateSeed'].apply(this, params);
+      if (typeof error === 'string') {
+        throw new Error(error);
+      }
+      const seed = await p;
+      console.log('seed', seed)
+
+      return seed;
+
+    } catch (ex) {
+      console.error('onCreateWallet', ex);
+    } finally {
+
+    }
+  }
+
+  private saveWallet = async (seed, currency) => {
+
+    try {
+
+      const params: any[] = [seed, currency, 0, 10];
+      const p = new Promise((resolve, reject) => {
+        const f = async (err, value) => {
+          if (err)
+            reject(new Error(err));
+          else if (value)
+            resolve(value);
+          else
+            resolve('');
+        }
+
+        params.push(f);
+      });
+
+      const error = sia['generateAddresses'].apply(this, params);
+      if (typeof error === 'string') {
+        throw new Error(error);
+      }
+      const addresses = await p;
+      console.log('addresses', addresses)
+      return addresses;
+    } catch (ex) {
+      console.error('saveWallet', ex);
+    } finally {
+    }
+  }
+
+
+
+
+  private loadWASM = async () => {
+    const wasmBuffer = fs.readFileSync(path.resolve(__dirname, '../sia/sia.wasm'));
+    const go = new Go(),
+        result = await WebAssembly.instantiate(wasmBuffer, go.importObject);
+
+    go.run(result.instance).catch(ex => console.error('go program exited', ex));
+
+    await new Promise(resolve => setTimeout(resolve, 1));
+  }
+
+  private load = async () => {
+    try {
+      await this.loadWASM();
+
+    } catch (ex) {
+      console.error('load', ex);
+    }
+  }
+
+
+
 }

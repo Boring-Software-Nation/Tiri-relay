@@ -87,7 +87,10 @@
     "rxjs": "^7.8.1",
     "slug": "^8.2.2",
     "spdy": "^4.0.2",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.0",
+    "@stablelib/base64": "^0.7.2",
+    "@stablelib/utf8": "^0.10.1",
+    "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
     "@mikro-orm/cli": "^5.7.13",

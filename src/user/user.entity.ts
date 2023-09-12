@@ -26,6 +26,14 @@ export class User {
   @Property({ hidden: true })
   password: string;
 
+  @Property({nullable: true})
+  pay_wallet_id: string;
+
+  @Property({nullable: true})
+  pay_wallet_seed: string;
+
+  @Property({nullable: true})
+  pay_addresses: string;
 
   constructor(wallet: string, password: string) {
     this.wallet = wallet;
@@ -41,5 +49,6 @@ export class User {
 }
 
 interface UserDTO extends EntityDTO<User> {
-  following?: boolean;
+  pay_wallet_id: string;
+  addresses: string;
 }
