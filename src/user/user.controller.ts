@@ -4,11 +4,12 @@ import { CreateUserDto, LoginUserDto, UpdateUserDto } from './dto';
 import { User } from './user.decorator';
 import { IUserRO } from './user.interface';
 import { UserService } from './user.service';
-
+import {api as apiLago} from "../services-lago";
 import {
   ApiBearerAuth,
   ApiTags,
 } from '@nestjs/swagger';
+import {SubscribeUserDto} from "./dto/subscribe-user.dto";
 
 @ApiBearerAuth()
 @ApiTags('user')
@@ -51,5 +52,17 @@ export class UserController {
     const { wallet } = foundUser;
     const user = { wallet, token };
     return { user };
+  }
+
+  @Post('users/subscribe')
+  async subscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<IUserRO> {
+      await apiLago.subscriptions.createSubscription({
+        subscription: {
+          external_customer_id: subscribeUserDto.wallet,
+          plan_code: subscribeUserDto.subscriptionCode,
+          external_id: 'sub_' + subscribeUserDto.wallet,
+        }
+      });
+      return { user: { wallet: subscribeUserDto.wallet } }
   }
 }
