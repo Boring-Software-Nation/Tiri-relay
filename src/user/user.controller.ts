@@ -10,6 +10,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {SubscribeUserDto} from "./dto/subscribe-user.dto";
+import {SubscriptionDto} from "./dto/subscription.dto";
+import {SubscriptionUsageEventDto} from "./dto/subscription-usage-event.dto";
 
 @ApiBearerAuth()
 @ApiTags('user')
@@ -54,15 +56,58 @@ export class UserController {
     return { user };
   }
 
+  @UsePipes(new ValidationPipe())
   @Post('users/subscribe')
-  async subscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<IUserRO> {
+  async subscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<any> {
+    try {
       await apiLago.subscriptions.createSubscription({
-        subscription: {
-          external_customer_id: subscribeUserDto.wallet,
-          plan_code: subscribeUserDto.subscriptionCode,
-          external_id: 'sub_' + subscribeUserDto.wallet,
+          subscription: {
+            external_customer_id: subscribeUserDto.wallet,
+            plan_code: subscribeUserDto.subscriptionCode,
+            external_id: 'sub_' + subscribeUserDto.wallet,
+          }
+        });
+    } catch (error) {
+      console.log('error', error)
+      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
+    return { user: { wallet: subscribeUserDto.wallet } }
+  }
+
+  @UsePipes(new ValidationPipe())
+  @Post('users/subscriptions')
+  async subscriptions(@Body('subscription') subscriptionDto: SubscriptionDto): Promise<any> {
+    try {
+      const result = await apiLago.subscriptions.findAllSubscriptions({
+          external_customer_id: subscriptionDto.external_customer_id,
+      });
+      console.log(result)
+      return result.data;
+    } catch (error) {
+      console.log('error', error)
+      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
+  }
+
+  @UsePipes(new ValidationPipe())
+  @Post('users/subscription-usage-event')
+  async subscriptionUsageEvent(@Body('event') subscriptionUsageEventDto: SubscriptionUsageEventDto): Promise<any> {
+    try {
+      const result = await apiLago.events.createEvent({
+        event: {
+          transaction_id: subscriptionUsageEventDto.transaction_id,
+          code: 'FILES_VOL',
+          external_customer_id: subscriptionUsageEventDto.external_customer_id,
+          properties: {
+            filesize: subscriptionUsageEventDto.filesize
+          }
         }
       });
-      return { user: { wallet: subscribeUserDto.wallet } }
+      console.log(result)
+      return result.data;
+    } catch (error) {
+      console.log('error', error)
+      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
   }
 }
