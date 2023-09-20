@@ -29,6 +29,33 @@
           "primary": false,
           "nullable": false,
           "mappedType": "string"
+        },
+        "pay_wallet_id": {
+          "name": "pay_wallet_id",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "string"
+        },
+        "pay_wallet_seed": {
+          "name": "pay_wallet_seed",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "string"
+        },
+        "pay_addresses": {
+          "name": "pay_addresses",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "string"
         }
       },
       "name": "user",

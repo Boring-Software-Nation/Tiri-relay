@@ -67,6 +67,8 @@ export class UserController {
             external_id: 'sub_' + subscribeUserDto.wallet,
           }
         });
+      const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
+      this.userService.update(userData.user.id, {plan_code: subscribeUserDto.subscriptionCode})
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}

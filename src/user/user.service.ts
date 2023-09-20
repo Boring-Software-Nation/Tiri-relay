@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import { EntityManager, wrap } from '@mikro-orm/core';
 import { CreateUserDto, LoginUserDto, UpdateUserDto } from './dto';
 import { User } from './user.entity';
-import { IUserRO } from './user.interface';
+import {IUserRO, IUserROSimple} from './user.interface';
 import { UserRepository } from './user.repository';
 import {ConfigService} from "@nestjs/config";
 import { encode as encodeB64 } from '@stablelib/base64';
@@ -114,6 +114,11 @@ export class UserService {
     return this.buildUserRO(user);
   }
 
+  async findUserByWallet(wallet: string): Promise<IUserROSimple> {
+    const user = await this.userRepository.findOneOrFail({ wallet });
+    return this.buildUserROSimple(user);
+  }
+
   generateJWT(user) {
     const today = new Date();
     const exp = new Date(today);
@@ -133,6 +138,16 @@ export class UserService {
     };
 
     return { user: userRO };
+  }
+
+  private buildUserROSimple(user: User) {
+    const userROSimple = {
+      id: user.id,
+      wallet: user.wallet,
+      plan_code: user.plan_code,
+    };
+
+    return { user: userROSimple };
   }
 
   private async createWallet() {
