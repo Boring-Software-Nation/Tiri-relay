@@ -19,6 +19,7 @@ import {ContentType} from "../services/api";
 import {Response} from "express";
 import {ConfigService} from "@nestjs/config";
 import {api as apiLago} from "../services-lago";
+import {LARGE_PLAN_LIMIT, MEDIUM_PLAN_LIMIT, SMALL_PLAN_LIMIT} from "../config";
 
 @ApiBearerAuth()
 @ApiTags('objects')
@@ -128,8 +129,14 @@ export class ObjectsController {
           const  customerUsageData = resultCustomerUsageData.data;
 
           let limitExceeded = false;
-          if (subscriptionData.subscriptions.find(x=> x.external_customer_id === wallet)?.plan_code === 'SMALL_YEARLY'
-              && customerUsageData.customer_usage.total_amount_cents > 1000 /* 10 sc */) {
+          const planCode = subscriptionData.subscriptions.find(x=> x.external_customer_id === wallet)?.plan_code
+          if ((planCode === 'SMALL_YEARLY'
+              && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(SMALL_PLAN_LIMIT)*1024*1024) ||
+              (planCode === 'MEDIUM_YEARLY'
+              && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(MEDIUM_PLAN_LIMIT)*1024*1024) ||
+              (planCode === 'LARGE_YEARLY'
+                  && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(LARGE_PLAN_LIMIT)*1024*1024)
+          ) {
             limitExceeded = true;
           }
 
@@ -159,7 +166,7 @@ export class ObjectsController {
               }
             }
           });
-          console.log('Subscription event result', result)
+          console.log('Subscription event status: ', result.status)
 
           res.status(r.status).send(r.data);
 
