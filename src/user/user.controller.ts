@@ -12,6 +12,7 @@ import {
 import {SubscribeUserDto} from "./dto/subscribe-user.dto";
 import {SubscriptionDto} from "./dto/subscription.dto";
 import {SubscriptionUsageEventDto} from "./dto/subscription-usage-event.dto";
+import {LARGE_PLAN_PRICE, MEDIUM_PLAN_PRICE, SMALL_PLAN_PRICE, SUBSCRIPTION_PAY_ADDRESS} from "../config";
 
 @ApiBearerAuth()
 @ApiTags('user')
@@ -60,6 +61,14 @@ export class UserController {
   @Post('users/subscribe')
   async subscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<any> {
     try {
+      if (subscribeUserDto.subscriptionAddress !== SUBSCRIPTION_PAY_ADDRESS ||
+          (subscribeUserDto.subscriptionCode === 'SMALL_YEARLY' && subscribeUserDto.subscriptionPrice != SMALL_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'MEDIUM_YEARLY' && subscribeUserDto.subscriptionPrice != MEDIUM_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'LARGE_YEARLY' && subscribeUserDto.subscriptionPrice != LARGE_PLAN_PRICE)
+      ) {
+        return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
+      }
+
       await apiLago.subscriptions.createSubscription({
           subscription: {
             external_customer_id: subscribeUserDto.wallet,

@@ -7,4 +7,10 @@ export class SubscribeUserDto {
 
   @IsNotEmpty()
   readonly subscriptionCode: string;
+
+  @IsNotEmpty()
+  readonly subscriptionAddress: string;
+
+  @IsNotEmpty()
+  readonly subscriptionPrice: string;
 }
