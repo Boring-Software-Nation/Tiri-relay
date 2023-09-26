@@ -18,9 +18,9 @@ export class ObjectsModule implements NestModule {
     consumer
       .apply(AuthMiddleware)
       .forRoutes(
-        { path: 'objects/:wallete', method: RequestMethod.GET },
-               { path: 'objects/:wallete', method: RequestMethod.PUT },
-               { path: 'objects/:wallete', method: RequestMethod.DELETE },
+        { path: 'objects/:wallet', method: RequestMethod.GET },
+               { path: 'objects/:wallet', method: RequestMethod.PUT },
+               { path: 'objects/:wallet', method: RequestMethod.DELETE },
         //,
         // { path: 'articles', method: RequestMethod.POST },
         // { path: 'articles/:slug', method: RequestMethod.DELETE },

@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { ObjectsModule } from './objects/objects.module';
 import { UserModule } from './user/user.module';
 import {AppConfig} from "./app.config";
+import {SettingsModule} from "./settings/settings.module";
 
 @Module({
   controllers: [
@@ -15,6 +16,7 @@ import {AppConfig} from "./app.config";
     MikroOrmModule.forRoot(),
     ObjectsModule,
     UserModule,
+    SettingsModule,
     ConfigModule.forRoot({
       isGlobal: true
     })
