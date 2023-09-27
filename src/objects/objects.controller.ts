@@ -88,9 +88,8 @@ export class ObjectsController {
       }
     })
     req.on('end', async () => {
-      if (accumulatedData) {
+      if (accumulatedData || query.pathType === 'dir') {
         // process the last bit of data in accumulatedData
-        console.log('end: accumulatedData length', accumulatedData.length)
 
         try {
           let path = wallet + (!query.path.startsWith('/') ? '/' : '') + query.path || '';
@@ -107,43 +106,46 @@ export class ObjectsController {
           }
 
           if (accumulatedData) {
+            console.log('end: accumulatedData length', accumulatedData.length)
             formData = accumulatedData;
             headers['Content-Length'] = `${formData.length}`
           }
 
-          console.log('Usage upload for user', wallet)
+          if (accumulatedData) {
+            console.log('Usage upload for user', wallet)
 
-          // const userData = await this.userService.findUserByWallet(wallet) // doesn't work here: "Using global EntityManager instance methods for context specific actions is disallowed"
+            // const userData = await this.userService.findUserByWallet(wallet) // doesn't work here: "Using global EntityManager instance methods for context specific actions is disallowed"
 
-          const resultSubscriptionsData = await apiLago.subscriptions.findAllSubscriptions({
-            external_customer_id: wallet,
-          });
+            const resultSubscriptionsData = await apiLago.subscriptions.findAllSubscriptions({
+              external_customer_id: wallet,
+            });
 
-          const subscriptionData = resultSubscriptionsData.data;
+            const subscriptionData = resultSubscriptionsData.data;
 
-          const resultCustomerUsageData = await apiLago.customers.findCustomerCurrentUsage({
-              externalCustomerId: wallet,
-              external_subscription_id: 'sub_' + wallet,
+            const resultCustomerUsageData = await apiLago.customers.findCustomerCurrentUsage({
+                  externalCustomerId: wallet,
+                  external_subscription_id: 'sub_' + wallet,
+                }
+            );
+            const customerUsageData = resultCustomerUsageData.data;
+
+            let limitExceeded = false;
+            const planCode = subscriptionData.subscriptions.find(x => x.external_customer_id === wallet)?.plan_code
+            if ((planCode === 'SMALL_YEARLY'
+                    && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(SMALL_PLAN_LIMIT) * 1024 * 1024) ||
+                (planCode === 'MEDIUM_YEARLY'
+                    && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(MEDIUM_PLAN_LIMIT) * 1024 * 1024) ||
+                (planCode === 'LARGE_YEARLY'
+                    && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(LARGE_PLAN_LIMIT) * 1024 * 1024)
+            ) {
+              limitExceeded = true;
             }
-          );
-          const  customerUsageData = resultCustomerUsageData.data;
 
-          let limitExceeded = false;
-          const planCode = subscriptionData.subscriptions.find(x=> x.external_customer_id === wallet)?.plan_code
-          if ((planCode === 'SMALL_YEARLY'
-              && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(SMALL_PLAN_LIMIT)*1024*1024) ||
-              (planCode === 'MEDIUM_YEARLY'
-              && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(MEDIUM_PLAN_LIMIT)*1024*1024) ||
-              (planCode === 'LARGE_YEARLY'
-                  && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(LARGE_PLAN_LIMIT)*1024*1024)
-          ) {
-            limitExceeded = true;
-          }
-
-          if (limitExceeded) {
-            console.log('Limit exceeded')
-            res.status(HttpStatus.FORBIDDEN).send({error: 'Limit exceeded'});
-            return;
+            if (limitExceeded) {
+              console.log('Limit exceeded')
+              res.status(HttpStatus.FORBIDDEN).send({error: 'Limit exceeded'});
+              return;
+            }
           }
 
 
@@ -155,18 +157,20 @@ export class ObjectsController {
           });
           console.log('Finished uploading file')
 
-          console.log('Register upload for user', wallet)
-          const result = await apiLago.events.createEvent({
-            event: {
-              transaction_id: new Date().getTime().toString() + '_' + formData.length,
-              code: 'FILES_VOL',
-              external_customer_id: wallet,
-              properties: {
-                filesize: formData.length
+          if (accumulatedData) {
+            console.log('Register upload for user', wallet)
+            const result = await apiLago.events.createEvent({
+              event: {
+                transaction_id: new Date().getTime().toString() + '_' + formData.length,
+                code: 'FILES_VOL',
+                external_customer_id: wallet,
+                properties: {
+                  filesize: formData.length
+                }
               }
-            }
-          });
-          console.log('Subscription event status: ', result.status)
+            });
+            console.log('Subscription event status: ', result.status)
+          }
 
           res.status(r.status).send(r.data);
 
