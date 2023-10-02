@@ -17,6 +17,7 @@ import { hash } from 'tweetnacl';
 import '../sia/wasm_exec.js';
 import * as fs from "fs";
 import path from "path";
+import {USE_SIA_CENTRAL} from "../config";
 
 declare const WebAssembly: any
 declare const Go: any
@@ -32,11 +33,13 @@ export class UserService {
     private configService: ConfigService,
   ) {
 
-    const loaded = this.load().then(
-        () => {
-          console.log('wasm loaded');
-        }
-    );
+    if (USE_SIA_CENTRAL === 'true') {
+      const loaded = this.load().then(
+          () => {
+            console.log('wasm loaded');
+          }
+      );
+    }
   }
 
   async findAll(): Promise<User[]> {
@@ -73,17 +76,16 @@ export class UserService {
         message: 'Input data validation failed',
         errors: { username: 'Userinput is not valid.' },
       }, HttpStatus.BAD_REQUEST);
-    } else {
+    } else if (USE_SIA_CENTRAL === 'true') {
       const seed = await this.createWallet();
       const id = encodeB64(hash(encodeUTF8(seed as string)));
       const addresses = await this.saveWallet(seed, 'sc');
       user.pay_wallet_id = id;
       user.pay_wallet_seed = seed as string;
       user.pay_addresses = JSON.stringify(addresses);
-
-      await this.em.persistAndFlush(user);
-      return this.buildUserRO(user);
     }
+    await this.em.persistAndFlush(user);
+    return this.buildUserRO(user);
   }
 
   async update(id: number, dto: UpdateUserDto) {
@@ -227,6 +229,9 @@ export class UserService {
   }
 
   private load = async () => {
+    if (USE_SIA_CENTRAL === 'false') {
+        return;
+    }
     try {
       await this.loadWASM();
 

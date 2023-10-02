@@ -17,3 +17,4 @@ export const MEDIUM_PLAN_PRICE = process.env.MEDIUM_PLAN_PRICE;
 export const LARGE_PLAN_PRICE = process.env.LARGE_PLAN_PRICE;
 export const SUBSCRIPTION_PAY_ADDRESS = process.env.SUBSCRIPTION_PAY_ADDRESS;
 export const USE_SSL = process.env.USE_SSL;
+export const USE_SIA_CENTRAL = process.env.USE_SIA_CENTRAL;
