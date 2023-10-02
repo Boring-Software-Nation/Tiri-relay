@@ -131,11 +131,11 @@ export class ObjectsController {
 
             let limitExceeded = false;
             const planCode = subscriptionData.subscriptions.find(x => x.external_customer_id === wallet)?.plan_code
-            if ((planCode === 'SMALL_YEARLY'
+            if ((planCode === 'SMALL'
                     && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(SMALL_PLAN_LIMIT) * 1024 * 1024) ||
-                (planCode === 'MEDIUM_YEARLY'
+                (planCode === 'MEDIUM'
                     && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(MEDIUM_PLAN_LIMIT) * 1024 * 1024) ||
-                (planCode === 'LARGE_YEARLY'
+                (planCode === 'LARGE'
                     && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseInt(LARGE_PLAN_LIMIT) * 1024 * 1024)
             ) {
               limitExceeded = true;

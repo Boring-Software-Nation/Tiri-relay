@@ -62,9 +62,9 @@ export class UserController {
   async subscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<any> {
     try {
       if (subscribeUserDto.subscriptionAddress !== SUBSCRIPTION_PAY_ADDRESS ||
-          (subscribeUserDto.subscriptionCode === 'SMALL_YEARLY' && subscribeUserDto.subscriptionPrice != SMALL_PLAN_PRICE) ||
-          (subscribeUserDto.subscriptionCode === 'MEDIUM_YEARLY' && subscribeUserDto.subscriptionPrice != MEDIUM_PLAN_PRICE) ||
-          (subscribeUserDto.subscriptionCode === 'LARGE_YEARLY' && subscribeUserDto.subscriptionPrice != LARGE_PLAN_PRICE)
+          (subscribeUserDto.subscriptionCode === 'SMALL' && subscribeUserDto.subscriptionPrice != SMALL_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'MEDIUM' && subscribeUserDto.subscriptionPrice != MEDIUM_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'LARGE' && subscribeUserDto.subscriptionPrice != LARGE_PLAN_PRICE)
       ) {
         return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
       }
