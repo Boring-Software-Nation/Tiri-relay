@@ -57,7 +57,10 @@ export class ObjectsController {
       r = await api.objects.objectsDetail(path, params);
     } catch (error) {
         console.log('error', error)
-        return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+        return {
+          status: error.response?.status ? error.response.status : 500,
+          statusText: error.response?.statusText ? error.response.statusText : '',
+          data: error.response?.data ? error.response.data : ''}
     }
 
     if (query.format === 'blob') {
