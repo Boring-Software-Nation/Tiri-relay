@@ -101,6 +101,24 @@ export class UserController {
   }
 
   @UsePipes(new ValidationPipe())
+  @Post('users/usage')
+  async usage(@Body('subscription') subscriptionDto: SubscriptionDto): Promise<any> {
+    try {
+      const result = await apiLago.customers.findCustomerCurrentUsage({
+            externalCustomerId: subscriptionDto.external_customer_id,
+            external_subscription_id: 'sub_' + subscriptionDto.external_customer_id,
+          }
+      );
+      console.log(result)
+      return result.data;
+
+    } catch (error) {
+      console.log('error', error)
+      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
+  }
+
+  @UsePipes(new ValidationPipe())
   @Post('users/subscription-usage-event')
   async subscriptionUsageEvent(@Body('event') subscriptionUsageEventDto: SubscriptionUsageEventDto): Promise<any> {
     try {
