@@ -60,6 +60,8 @@ export class UserController {
   @UsePipes(new ValidationPipe())
   @Post('users/subscribe')
   async subscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<any> {
+    let totalToPay : number = parseFloat(subscribeUserDto.subscriptionPrice) ;
+    let subscriptionDate: string = '';
     try {
       if (subscribeUserDto.subscriptionAddress !== SUBSCRIPTION_PAY_ADDRESS ||
           (subscribeUserDto.subscriptionCode === 'SMALL' && subscribeUserDto.subscriptionPrice != SMALL_PLAN_PRICE) ||
@@ -69,15 +71,110 @@ export class UserController {
         return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
       }
 
-      await apiLago.subscriptions.createSubscription({
+      const subscriptionsData = await apiLago.subscriptions.findAllSubscriptions({
+            external_customer_id: subscribeUserDto.wallet,
+          }
+      )
+
+      let code = subscribeUserDto.subscriptionCode
+      if (subscriptionsData.data.subscriptions.length > 0) {
+        const currentSubscription = subscriptionsData.data.subscriptions[0];
+        if (code === currentSubscription.plan_code) {
+          code += '-2'
+        }
+      }
+
+      const subscriptionResult = await apiLago.subscriptions.createSubscription({
           subscription: {
             external_customer_id: subscribeUserDto.wallet,
-            plan_code: subscribeUserDto.subscriptionCode,
+            plan_code: code,
             external_id: 'sub_' + subscribeUserDto.wallet,
+            billing_time: 'anniversary',
           }
         });
+      subscriptionDate = subscriptionResult.data.subscription.subscription_at;
+
+      function msleep(n) {
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
+      }
+
+      function sleep(n) {
+        msleep(n * 1000);
+      }
+
+      let invoiceFound = false;
+      while (!invoiceFound) {
+        const invoicesData = await apiLago.invoices.findAllInvoices({
+          external_customer_id: subscribeUserDto.wallet,
+          payment_status: 'pending',
+        })
+        if (invoicesData.data.invoices.length > 0) {
+          const invoiceData = invoicesData.data.invoices[0];
+          if (invoiceData.customer.lago_id === subscriptionResult.data.subscription.lago_customer_id) {
+            invoiceFound = true;
+            if (totalToPay * 100 > invoiceData.total_amount_cents)
+              totalToPay = totalToPay - (totalToPay * 100 - invoiceData.total_amount_cents) / 100;
+          } else {
+            console.log('No customer found')
+            sleep(3);
+          }
+        } else {
+          console.log('No invoices found')
+          sleep(3);
+        }
+      }
+    } catch (error) {
+      console.log('error', error)
+      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
+    return { user: { wallet: subscribeUserDto.wallet, total_to_pay: totalToPay, subscription_date: subscriptionDate } }
+  }
+
+  @UsePipes(new ValidationPipe())
+  @Post('users/finalize_subscribe')
+  async finalizeSubscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<any> {
+    try {
+      if (subscribeUserDto.subscriptionAddress !== SUBSCRIPTION_PAY_ADDRESS ||
+          (subscribeUserDto.subscriptionCode === 'SMALL' && subscribeUserDto.subscriptionPrice != SMALL_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'MEDIUM' && subscribeUserDto.subscriptionPrice != MEDIUM_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'LARGE' && subscribeUserDto.subscriptionPrice != LARGE_PLAN_PRICE)
+      ) {
+        return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
+      }
+
+      const invoicesData = await apiLago.invoices.findAllInvoices({
+        external_customer_id: subscribeUserDto.wallet,
+        payment_status: 'pending',
+      })
+      if (invoicesData.data.invoices.length > 0) {
+        const usageInvoice = invoicesData.data.invoices[0];
+        await apiLago.invoices.updateInvoice(usageInvoice.lago_id, {invoice: {payment_status: 'succeeded'}})
+      }
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
       this.userService.update(userData.user.id, {plan_code: subscribeUserDto.subscriptionCode})
+    } catch (error) {
+      console.log('error', error)
+      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
+    return { user: { wallet: subscribeUserDto.wallet } }
+  }
+
+  @UsePipes(new ValidationPipe())
+  @Post('users/cancel_subscribe')
+  async cancelSubscribe(@Body('subscription') subscribeUserDto: SubscribeUserDto): Promise<any> {
+    try {
+      if (subscribeUserDto.subscriptionAddress !== SUBSCRIPTION_PAY_ADDRESS ||
+          (subscribeUserDto.subscriptionCode === 'SMALL' && subscribeUserDto.subscriptionPrice != SMALL_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'MEDIUM' && subscribeUserDto.subscriptionPrice != MEDIUM_PLAN_PRICE) ||
+          (subscribeUserDto.subscriptionCode === 'LARGE' && subscribeUserDto.subscriptionPrice != LARGE_PLAN_PRICE)
+      ) {
+        return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
+      }
+
+      await apiLago.subscriptions.destroySubscription({externalId: subscribeUserDto.wallet, status: 'pending'})
+
+      const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
+      this.userService.update(userData.user.id, {plan_code: 'NONE'})
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
