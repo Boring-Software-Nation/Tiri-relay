@@ -151,7 +151,7 @@ export class UserController {
         if (invoicesData.data.invoices.length > 0) {
           const invoiceData = invoicesData.data.invoices[0];
           if (invoiceData.customer.lago_id === subscriptionResult.data.subscription.lago_customer_id) {
-            // SMALL plan has recurring charge of 0.01, MEDUIM plan - 0.02, LARGE plan - 0.03
+            // SMALL plan has recurring charge of 0.01, MEDIUM plan - 0.02, LARGE plan - 0.03
             if (invoiceData.total_amount_cents > 3) {
               invoiceFound = true;
               if (totalToPay * 100 > alreadyPaid * 100 - invoiceData.total_amount_cents) {
@@ -199,7 +199,7 @@ export class UserController {
         await apiLago.invoices.updateInvoice(usageInvoice.lago_id, {invoice: {payment_status: 'succeeded'}})
       }
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
-      this.userService.update(userData.user.id, {plan_code: subscribeUserDto.subscriptionCode})
+      await this.userService.update(userData.user.id, {plan_code: subscribeUserDto.subscriptionCode})
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
@@ -222,7 +222,7 @@ export class UserController {
       await apiLago.subscriptions.destroySubscription({externalId: 'sub_'+subscribeUserDto.wallet, status: 'pending'})
 
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
-      this.userService.update(userData.user.id, {plan_code: 'NONE'})
+      await this.userService.update(userData.user.id, {plan_code: 'NONE'})
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
@@ -239,7 +239,7 @@ export class UserController {
       });
       const userData = await this.userService.findUserByWallet(subscriptionDto.external_customer_id)
       if (!userData.user.plan_code) {
-        this.userService.update(userData.user.id, {plan_code: result.data.subscriptions[0].plan_code})
+        await this.userService.update(userData.user.id, {plan_code: result.data.subscriptions[0].plan_code})
       }
       console.log(result)
       return result.data;
