@@ -55,12 +55,23 @@ export class UserService {
     return this.userRepository.findOne(findOneOptions);
   }
 
-  async create(dto: CreateUserDto): Promise<IUserRO> {
-    // check uniqueness of wallet
+  async canCreate(dto: CreateUserDto): Promise<boolean> {
     const { wallet, password } = dto;
     const exists = await this.userRepository.count({ $or: [{ wallet }] });
 
     if (exists > 0) {
+        return false;
+    }
+
+    return true;
+  }
+
+  async create(dto: CreateUserDto): Promise<IUserRO> {
+    // check uniqueness of wallet
+    const { wallet, password } = dto;
+    const canCreate = await this.canCreate(dto);
+
+    if (!canCreate) {
       throw new HttpException({
         message: 'Input data validation failed',
         errors: { username: 'Wallet must be unique.' },
@@ -104,8 +115,7 @@ export class UserService {
     const user = await this.userRepository.findOne(id);
 
     if (!user) {
-      const errors = { User: ' not found' };
-      throw new HttpException({ errors }, 401);
+      throw new HttpException('User not found', 401);
     }
 
     return this.buildUserRO(user);

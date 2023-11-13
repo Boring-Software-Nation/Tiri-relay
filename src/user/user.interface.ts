@@ -6,6 +6,10 @@ export interface IUserRO {
   user: IUserData;
 }
 
+export interface ICanCreateUserRO {
+  result: boolean;
+}
+
 export interface IUserDataSimple {
   id: number;
   wallet: string;

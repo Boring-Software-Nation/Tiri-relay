@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, HttpException, Param, Post, Put, UsePipe
 import { ValidationPipe } from '../shared/pipes/validation.pipe';
 import { CreateUserDto, LoginUserDto, UpdateUserDto } from './dto';
 import { User } from './user.decorator';
-import { IUserRO } from './user.interface';
+import {ICanCreateUserRO, IUserRO} from './user.interface';
 import { UserService } from './user.service';
 import {api as apiLago} from "../services-lago";
 import {
@@ -43,13 +43,28 @@ export class UserController {
   }
 
   @UsePipes(new ValidationPipe())
+  @Post('users/validate')
+  async validate(@Body('user') loginUserDto: LoginUserDto): Promise<ICanCreateUserRO> {
+    const foundUser = await this.userService.findOne(loginUserDto);
+    if (foundUser) {
+      return { result: true };
+    }
+
+    const canCreate = await this.userService.canCreate(loginUserDto)
+
+    if (!canCreate) {
+      throw new HttpException('Cannot create user', 401);
+    }
+    return { result: true };
+  }
+
+  @UsePipes(new ValidationPipe())
   @Post('users/login')
   async login(@Body('user') loginUserDto: LoginUserDto): Promise<IUserRO> {
     const foundUser = await this.userService.findOne(loginUserDto);
 
-    const errors = { User: ' not found' };
     if (!foundUser) {
-      throw new HttpException({ errors }, 401);
+      throw new HttpException('User not found', 401);
     }
     const token = await this.userService.generateJWT(foundUser);
     const { wallet } = foundUser;
@@ -222,6 +237,10 @@ export class UserController {
       const result = await apiLago.subscriptions.findAllSubscriptions({
           external_customer_id: subscriptionDto.external_customer_id,
       });
+      const userData = await this.userService.findUserByWallet(subscriptionDto.external_customer_id)
+      if (!userData.user.plan_code) {
+        this.userService.update(userData.user.id, {plan_code: result.data.subscriptions[0].plan_code})
+      }
       console.log(result)
       return result.data;
     } catch (error) {
