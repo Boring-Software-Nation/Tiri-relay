@@ -21,14 +21,6 @@ export class ObjectsModule implements NestModule {
         { path: 'objects/:wallet', method: RequestMethod.GET },
                { path: 'objects/:wallet', method: RequestMethod.PUT },
                { path: 'objects/:wallet', method: RequestMethod.DELETE },
-        //,
-        // { path: 'articles', method: RequestMethod.POST },
-        // { path: 'articles/:slug', method: RequestMethod.DELETE },
-        // { path: 'articles/:slug', method: RequestMethod.PUT },
-        // { path: 'articles/:slug/comments', method: RequestMethod.POST },
-        // { path: 'articles/:slug/comments/:id', method: RequestMethod.DELETE },
-        // { path: 'articles/:slug/favorite', method: RequestMethod.POST },
-        // { path: 'articles/:slug/favorite', method: RequestMethod.DELETE });
       );
   }
 }

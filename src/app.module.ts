@@ -4,6 +4,7 @@ import { MikroOrmMiddleware, MikroOrmModule } from '@mikro-orm/nestjs';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { ObjectsModule } from './objects/objects.module';
+import { SearchModule } from './search/search.module';
 import { UserModule } from './user/user.module';
 import {AppConfig} from "./app.config";
 import {SettingsModule} from "./settings/settings.module";
@@ -15,6 +16,7 @@ import {SettingsModule} from "./settings/settings.module";
   imports: [
     MikroOrmModule.forRoot(),
     ObjectsModule,
+    SearchModule,
     UserModule,
     SettingsModule,
     ConfigModule.forRoot({
