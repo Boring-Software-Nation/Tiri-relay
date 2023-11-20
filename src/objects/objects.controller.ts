@@ -81,6 +81,9 @@ export class ObjectsController {
     let r;
     let file = null;
     let accumulatedData;
+    // req.setTimeout(1000 * 60 * 30)
+    // res.setTimeout(1000 * 60 * 30);
+    // res.socket.setTimeout(1000 * 60 * 30);
     req.on('data', chunk => {
       console.log(`Received ${chunk.length} bytes of data.`);
       // console.log(chunk)
@@ -88,8 +91,12 @@ export class ObjectsController {
         accumulatedData = chunk;
       } else {
         accumulatedData = Buffer.concat([accumulatedData, chunk]);
+        console.log(`Received ${chunk.length} bytes of data. AccumulatedData length: ${accumulatedData.length}`)
       }
     })
+    req.on('error', function(err) {
+          console.error(err)
+    });
     req.on('end', async () => {
       if (accumulatedData || query.pathType === 'dir') {
         // process the last bit of data in accumulatedData

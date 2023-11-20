@@ -38,7 +38,9 @@ async function bootstrap() {
     };
 
     const server: Server = spdy.createServer(spdyOpts, expressApp);
-
+    server.setTimeout(1000 * 60 * 30);
+    server.headersTimeout = 0;
+    server.requestTimeout = 0;
     const appOptions = {cors: true};
 
     const app: NestApplication = await NestFactory.create(
