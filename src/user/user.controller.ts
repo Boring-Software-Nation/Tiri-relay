@@ -238,14 +238,18 @@ export class UserController {
           external_customer_id: subscriptionDto.external_customer_id,
       });
       const userData = await this.userService.findUserByWallet(subscriptionDto.external_customer_id)
-      if (!userData.user.plan_code) {
+      if (!userData.user.plan_code && result.data.subscriptions.length > 0) {
         await this.userService.update(userData.user.id, {plan_code: result.data.subscriptions[0].plan_code})
       }
       console.log(result)
       return result.data;
     } catch (error) {
       console.log('error', error)
-      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+      if (error.response) {
+        return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+      } else {
+        return {status: 401, statusText: 'User not found', data: {error: ['User not found']}}
+      }
     }
   }
 
