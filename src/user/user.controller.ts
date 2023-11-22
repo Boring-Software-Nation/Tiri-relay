@@ -219,7 +219,7 @@ export class UserController {
         return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
       }
 
-      await apiLago.subscriptions.destroySubscription({externalId: 'sub_'+subscribeUserDto.wallet, status: 'pending'})
+      await apiLago.subscriptions.destroySubscription({externalId: 'sub_'+subscribeUserDto.wallet/*, status: 'pending'*/})
 
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
       await this.userService.update(userData.user.id, {plan_code: 'NONE'})
