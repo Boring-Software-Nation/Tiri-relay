@@ -21,6 +21,11 @@ import {ConfigService} from "@nestjs/config";
 import {api as apiLago} from "../services-lago";
 import {LARGE_PLAN_LIMIT, MEDIUM_PLAN_LIMIT, SMALL_PLAN_LIMIT} from "../config";
 
+import {mkdirSync, unlinkSync, statSync, readFileSync, existsSync, mkdtempSync} from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { appendFileSync, closeSync, openSync } from "node:fs";
+
 @ApiBearerAuth()
 @ApiTags('objects')
 @Controller('objects')
@@ -75,27 +80,60 @@ export class ObjectsController {
   @ApiOperation({ summary: 'Update object' })
   @ApiResponse({ status: 201, description: 'The object has been successfully updated.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  // @UseInterceptors(FileInterceptor('file'))
   @Put(':wallet')
-  async update(@Param('wallet') wallet: string, /*@UploadedFile() file,*/ @Req() req, @Query() query, @Res() res: Response) {
+  async update(@Param('wallet') wallet: string, @Req() req, @Query() query, @Res() res: Response) {
     let r;
-    let file = null;
     let accumulatedData;
+    let tempDir = null, tempFilePath = null;
+    let useTempFile = true;
+
     // req.setTimeout(1000 * 60 * 30)
     // res.setTimeout(1000 * 60 * 30);
     // res.socket.setTimeout(1000 * 60 * 30);
+
     req.on('data', chunk => {
       console.log(`Received ${chunk.length} bytes of data.`);
       // console.log(chunk)
-      if (!accumulatedData) {
-        accumulatedData = chunk;
-      } else {
-        accumulatedData = Buffer.concat([accumulatedData, chunk]);
-        console.log(`Received ${chunk.length} bytes of data. AccumulatedData length: ${accumulatedData.length}`)
+      if (useTempFile && !tempFilePath) {
+        console.log('Creating temp file')
+        if (!tempDir || !existsSync(tempDir)) {
+          tempDir = mkdtempSync(join(tmpdir(), 'upload-'));
+        }
+        tempFilePath = join(tempDir, 'upload.tmp');
+        closeSync(openSync(tempFilePath, 'w'));
+      }
+
+      if (!useTempFile) {
+        if (!accumulatedData) {
+          accumulatedData = chunk;
+        } else {
+          accumulatedData = Buffer.concat([accumulatedData, chunk]);
+          console.log(`Received ${chunk.length} bytes of data. AccumulatedData length: ${accumulatedData.length}`)
+        }
+      }
+
+      if (tempFilePath) {
+        console.log('Writing chunk to temp file')
+        let fd;
+        try {
+          fd = openSync(tempFilePath, 'a');
+          appendFileSync(fd, chunk);
+        } catch (err) {
+          console.error('Error writing to the temporary file:', err)
+        } finally {
+          if (fd !== undefined)
+            closeSync(fd);
+        }
+
+        accumulatedData = true;
       }
     })
     req.on('error', function(err) {
-          console.error(err)
+      if (tempFilePath) {
+        accumulatedData = false;
+        unlinkSync(tempFilePath);
+      }
+      console.error(err)
     });
     req.on('end', async () => {
       if (accumulatedData || query.pathType === 'dir') {
@@ -108,17 +146,45 @@ export class ObjectsController {
           }
           let formData = null;
           const headers = {
-            'Content-Type': file ? ContentType.FormData : ContentType.Text,
-          }
-          if (file) {
-            formData = Buffer.from(file.buffer)
-            headers['Content-Length'] = `${file.size}`
+            'Content-Type': ContentType.Text,
           }
 
           if (accumulatedData) {
-            console.log('end: accumulatedData length', accumulatedData.length)
-            formData = accumulatedData;
-            headers['Content-Length'] = `${formData.length}`
+            if (!useTempFile) {
+              formData = accumulatedData;
+            }
+
+            if (useTempFile) {
+              if ((statSync(tempFilePath)).size > 0) {
+                try {
+                  console.log('end: reading temp file')
+                  formData = readFileSync(tempFilePath);
+                } catch (readError) {
+                  console.error('Error reading the temporary file:', readError);
+
+                  if (tempFilePath) {
+                    unlinkSync(tempFilePath);
+                    tempFilePath = null;
+                    accumulatedData = false;
+                  }
+
+                  res.status(500).send('Error processing file');
+                  return;
+                }
+              } else {
+                console.log('end: temp file is empty')
+                if (tempFilePath) {
+                  unlinkSync(tempFilePath);
+                  tempFilePath = null;
+                  accumulatedData = false;
+                }
+              }
+            }
+
+            if (formData) {
+              console.log('end: formData (accumulatedData) length', formData.length)
+              headers['Content-Length'] = `${formData.length}`
+            }
           }
 
           if (accumulatedData) {
@@ -153,6 +219,13 @@ export class ObjectsController {
 
             if (limitExceeded) {
               console.log('Limit exceeded')
+
+              if (tempFilePath) {
+                unlinkSync(tempFilePath);
+                accumulatedData = false;
+                tempFilePath = null;
+              }
+
               res.status(HttpStatus.FORBIDDEN).send({error: 'Limit exceeded'});
               return;
             }
@@ -162,7 +235,7 @@ export class ObjectsController {
           console.log('Start uploading file')
           r = await api.objects.objectsUpdate(path, formData, {
             baseURL: `${this.configService.get<string>('API_HOST')}/api/worker`,
-            type: file || accumulatedData ? ContentType.FormData : ContentType.Text,
+            type:  accumulatedData ? ContentType.FormData : ContentType.Text,
             headers: headers
           });
           console.log('Finished uploading file')
@@ -182,14 +255,28 @@ export class ObjectsController {
             console.log('Subscription event status: ', result.status)
           }
 
+          if (tempFilePath) {
+            unlinkSync(tempFilePath);
+            accumulatedData = false;
+            tempFilePath = null;
+          }
+
           res.status(r.status).send(r.data);
 
         } catch (error) {
           console.log('error', error)
+          if (tempFilePath) {
+            unlinkSync(tempFilePath);
+            accumulatedData = false;
+            tempFilePath = null;
+          }
           res.status(error.response.status).send(error.response.data);
         }
       } else {
         console.warn('end: accumulatedData is empty')
+        // if (tempFilePath) {
+        //   await fsPromises.unlink(tempFilePath);
+        // }
       }
     })
 
