@@ -56,6 +56,15 @@
           "primary": false,
           "nullable": true,
           "mappedType": "string"
+        },
+        "plan_code": {
+          "name": "plan_code",
+          "type": "varchar(255)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "string"
         }
       },
       "name": "user",
