@@ -38,6 +38,9 @@ export class User {
   @Property({nullable: true})
   plan_code: string;
 
+  @Property({nullable: true})
+  was_trial: boolean;
+
   constructor(wallet: string, password: string) {
     this.wallet = wallet;
     this.password = crypto.createHmac('sha256', password).digest('hex');

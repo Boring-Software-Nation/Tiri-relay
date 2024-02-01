@@ -157,6 +157,7 @@ export class UserService {
       id: user.id,
       wallet: user.wallet,
       plan_code: user.plan_code,
+      was_trial: user.was_trial,
     };
 
     return { user: userROSimple };

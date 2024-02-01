@@ -19,7 +19,7 @@ import {ContentType} from "../services/api";
 import {Response} from "express";
 import {ConfigService} from "@nestjs/config";
 import {api as apiLago} from "../services-lago";
-import {LARGE_PLAN_LIMIT, MEDIUM_PLAN_LIMIT, SMALL_PLAN_LIMIT} from "../config";
+import {LARGE_PLAN_LIMIT, MEDIUM_PLAN_LIMIT, TRIAL_PLAN_LIMIT} from "../config";
 
 import {mkdirSync, unlinkSync, statSync, readFileSync, existsSync, mkdtempSync} from 'fs';
 import { join } from 'path';
@@ -207,8 +207,8 @@ export class ObjectsController {
 
             let limitExceeded = false;
             const planCode = subscriptionData.subscriptions.find(x => x.external_customer_id === wallet)?.plan_code
-            if ((planCode === 'SMALL'
-                    && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseFloat(SMALL_PLAN_LIMIT) * 1024 * 1024) ||
+            if ((planCode === 'TRIAL'
+                    && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseFloat(TRIAL_PLAN_LIMIT) * 1024 * 1024) ||
                 (planCode === 'MEDIUM'
                     && parseInt(customerUsageData.customer_usage.charges_usage[0].units) > parseFloat(MEDIUM_PLAN_LIMIT) * 1024 * 1024) ||
                 (planCode === 'LARGE'

@@ -12,7 +12,7 @@ import {
 import {SubscribeUserDto} from "./dto/subscribe-user.dto";
 import {SubscriptionDto} from "./dto/subscription.dto";
 import {SubscriptionUsageEventDto} from "./dto/subscription-usage-event.dto";
-import {LARGE_PLAN_PRICE, MEDIUM_PLAN_PRICE, SMALL_PLAN_PRICE, SUBSCRIPTION_PAY_ADDRESS} from "../config";
+import {LARGE_PLAN_PRICE, MEDIUM_PLAN_PRICE, SUBSCRIPTION_PAY_ADDRESS} from "../config";
 
 @ApiBearerAuth()
 @ApiTags('user')
@@ -86,8 +86,10 @@ export class UserController {
         return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
       }
 
-      if (subscribeUserDto.subscriptionCode === 'SMALL') {
-        totalToPay = parseFloat(SMALL_PLAN_PRICE)
+      const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
+
+      if (subscribeUserDto.subscriptionCode === 'TRIAL') {
+        totalToPay = 0;
       } else if (subscribeUserDto.subscriptionCode === 'MEDIUM') {
         totalToPay = parseFloat(MEDIUM_PLAN_PRICE)
       } else if (subscribeUserDto.subscriptionCode === 'LARGE') {
@@ -107,18 +109,23 @@ export class UserController {
         const currentSubscription = subscriptionsData.data.subscriptions[0];
         wasPreviousSubscription = true;
 
-        if (currentSubscription.plan_code === 'SMALL') {
-          alreadyPaid = parseFloat(SMALL_PLAN_PRICE)
+        if (currentSubscription.plan_code === 'TRIAL') {
+          alreadyPaid = 0;
         } else if (currentSubscription.plan_code === 'MEDIUM') {
           alreadyPaid = parseFloat(MEDIUM_PLAN_PRICE)
         } else if (currentSubscription.plan_code === 'LARGE') {
           alreadyPaid = parseFloat(LARGE_PLAN_PRICE)
         }
 
-        if (code === currentSubscription.plan_code) {
+        if (code === currentSubscription.plan_code && code !== 'TRIAL') {
           code += '-2'
         }
+
+        if (code === 'TRIAL' && (currentSubscription.plan_code == 'TRIAL' || userData.user.was_trial)) {
+          return {status: 400, statusText: 'Bad Request', data: {error: ['Trial is not available']}}
+        }
       }
+
 
       const subscriptionResult = await apiLago.subscriptions.createSubscription({
           subscription: {
@@ -151,7 +158,7 @@ export class UserController {
         if (invoicesData.data.invoices.length > 0) {
           const invoiceData = invoicesData.data.invoices[0];
           if (invoiceData.customer.lago_id === subscriptionResult.data.subscription.lago_customer_id) {
-            // SMALL plan has recurring charge of 0.01, MEDIUM plan - 0.02, LARGE plan - 0.03
+            // TRIAL plan has an indicator: recurring charge = 0.01, MEDIUM plan - 0.02, LARGE plan - 0.03
             if (invoiceData.total_amount_cents > 3) {
               invoiceFound = true;
               if (totalToPay * 100 > alreadyPaid * 100 - invoiceData.total_amount_cents) {
@@ -199,7 +206,10 @@ export class UserController {
         await apiLago.invoices.updateInvoice(usageInvoice.lago_id, {invoice: {payment_status: 'succeeded'}})
       }
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
-      await this.userService.update(userData.user.id, {plan_code: subscribeUserDto.subscriptionCode})
+      await this.userService.update(userData.user.id, {
+        plan_code: subscribeUserDto.subscriptionCode,
+        was_trial: subscribeUserDto.subscriptionCode === 'TRIAL'
+      })
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
@@ -239,7 +249,10 @@ export class UserController {
       });
       const userData = await this.userService.findUserByWallet(subscriptionDto.external_customer_id)
       if (!userData.user.plan_code && result.data.subscriptions.length > 0) {
-        await this.userService.update(userData.user.id, {plan_code: result.data.subscriptions[0].plan_code})
+        await this.userService.update(userData.user.id, {
+          plan_code: result.data.subscriptions[0].plan_code,
+          was_trial: result.data.subscriptions[0].plan_code === 'TRIAL'
+        })
       }
       console.log(result)
       return result.data;
