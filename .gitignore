@@ -32,3 +32,4 @@ test.key
 .env.local
 .env.*.local
 .env
+.env-prod

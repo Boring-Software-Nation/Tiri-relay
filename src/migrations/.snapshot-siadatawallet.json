@@ -65,6 +65,15 @@
           "primary": false,
           "nullable": true,
           "mappedType": "string"
+        },
+        "was_trial": {
+          "name": "was_trial",
+          "type": "tinyint(1)",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "mappedType": "boolean"
         }
       },
       "name": "user",

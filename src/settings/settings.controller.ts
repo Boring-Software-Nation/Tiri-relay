@@ -15,6 +15,8 @@ import {
   TRIAL_PLAN_LIMIT
 } from "../config";
 import {ValidationPipe} from "../shared/pipes/validation.pipe";
+import {SettingsRepository} from "./settings.repository";
+import crypto from "crypto";
 
 @ApiBearerAuth()
 @ApiTags('settings')
@@ -23,6 +25,7 @@ export class SettingsController {
 
   constructor(
       private configService: ConfigService,
+      private settingsRepository: SettingsRepository,
   ) {}
 
   @UsePipes(new ValidationPipe())
@@ -40,6 +43,22 @@ export class SettingsController {
     });
   }
 
+  @ApiOperation({ summary: 'Get latest version' })
+  @ApiResponse({ status: 200, description: 'Get latest version.' })
+  @ApiResponse({ status: 404, description: 'Not found.' })
+  @ApiResponse({ status: 403, description: 'Forbidden.' })
+  @Get('/version')
+  async version(@Res() res: Response): Promise<any> {
 
+    const findOneOptions = {
+      key: 'last_version'
+    };
+
+    const lastVersion = await this.settingsRepository.findOne(findOneOptions);
+
+    res.send({
+      last_version: lastVersion ? lastVersion.value : '',
+    });
+  }
 
 }
