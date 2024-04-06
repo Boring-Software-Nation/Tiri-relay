@@ -293,7 +293,38 @@ export class ObjectsController {
       if (query.pathType === 'dir' && query.path && !query.path.endsWith('/')) {
         path += '/';
       }
+
+      let serviceName = 'bus';
+      const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api/${serviceName}`};
+      let objDataResponse;
+      let decreaseVol = 0;
+      try {
+        objDataResponse = await api.objects.objectsDetail(path, params);
+        decreaseVol = -1 * objDataResponse.data.object.size
+      } catch (error) {
+        console.log('error', error)
+        return {
+          status: error.response?.status ? error.response.status : 500,
+          statusText: error.response?.statusText ? error.response.statusText : '',
+          data: error.response?.data ? error.response.data : ''}
+      }
+
       r = await api.objects.objectsDelete2(path,  {baseURL: `${this.configService.get<string>('API_HOST')}/api/bus`});
+
+      if (decreaseVol < 0) {
+        console.log('Register decrease volume for user', wallet)
+        const result = await apiLago.events.createEvent({
+          event: {
+            transaction_id: new Date().getTime().toString() + '_' + decreaseVol,
+            code: 'FILES_VOL',
+            external_customer_id: wallet,
+            properties: {
+              filesize: decreaseVol
+            }
+          }
+        });
+        console.log('Subscription event status: ', result.status)
+      }
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}

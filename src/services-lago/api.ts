@@ -2149,7 +2149,7 @@ export interface EventInput {
      * This field represents additional properties associated with the event, which are utilized in the calculation of the final fee. This object becomes mandatory when the targeted billable metric employs a `sum_agg`, `max_agg`, or `unique_count_agg` aggregation method. However, when using a simple `count_agg`, this object is not required.
      * @example {"gb":10}
      */
-    properties?: Record<string, string>;
+    properties?: Record<string, string|number>;
   };
 }
 
