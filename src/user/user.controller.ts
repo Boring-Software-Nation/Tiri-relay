@@ -13,6 +13,7 @@ import {SubscribeUserDto} from "./dto/subscribe-user.dto";
 import {SubscriptionDto} from "./dto/subscription.dto";
 import {SubscriptionUsageEventDto} from "./dto/subscription-usage-event.dto";
 import {LARGE_PLAN_PRICE, MEDIUM_PLAN_PRICE, SUBSCRIPTION_PAY_ADDRESS} from "../config";
+import {FeedbackDto} from "./dto/feedback.dto";
 
 @ApiBearerAuth()
 @ApiTags('user')
@@ -305,4 +306,17 @@ export class UserController {
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
     }
   }
-}
+
+  @UsePipes(new ValidationPipe())
+  @Post('users/feedback')
+  async sendFeedback(@Body('feedback') feedbackDto: FeedbackDto): Promise<any> {
+    try{
+        //TODO
+    } catch (error) {
+      console.log('error', error)
+      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+    }
+    return { user: { wallet: feedbackDto.wallet } }
+    }
+
+  }
