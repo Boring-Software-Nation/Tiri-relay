@@ -1,0 +1,34 @@
+doctype html
+html
+    head
+    link(href="https://fonts.googleapis.com/css?family=Gotham:400,500,700", rel="stylesheet")
+    body(style="font-family:'Gotham', sans-serif;")
+
+        .container(style="margin: 70px auto 0;")
+
+            h2(style="font-weight: 600;")
+                | Wallet Address
+            .text(style="text-align: justify; font-weight: 20px")
+                p(style="margin-top: 10px; margin-bottom: 10px; color: #41404699; font-size: 16px; font-weight: 400;")
+                    | #{data.wallet}
+            h2(style="font-weight: 600;")
+                | Sender email
+            .text(style="text-align: justify; font-weight: 20px")
+                p(style="margin-top: 10px; margin-bottom: 10px; color: #41404699; font-size: 16px; font-weight: 400;")
+                    | #{data.sender}
+            h2(style="font-weight: 600;")
+                | Subject
+            .text(style="text-align: justify; font-weight: 20px")
+                p(style="margin-top: 10px; margin-bottom: 10px; color: #41404699; font-size: 16px; font-weight: 400;")
+                    | #{data.subject}
+            h2(style="font-weight: 600;")
+                | Message
+            .text(style="text-align: justify; font-weight: 20px")
+                p(style="color: #41404699; font-size: 16; font-weight: 20px")
+                    | #{data.message}
+
+                hr(style="border: 1px solid #ccc; color: #41404626; margin-top: 70px; margin-bottom: 20px;")
+
+                .copyright(style="text-align: center; font-size: 0.8em; font-weight: 600;")
+                    p(style="margin-top: 30px; margin-bottom: 10px; color: #41404699;")
+                        | Tiri #{data.year} ©. All rights reserved.

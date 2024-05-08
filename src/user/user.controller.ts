@@ -12,7 +12,7 @@ import {
 import {SubscribeUserDto} from "./dto/subscribe-user.dto";
 import {SubscriptionDto} from "./dto/subscription.dto";
 import {SubscriptionUsageEventDto} from "./dto/subscription-usage-event.dto";
-import {LARGE_PLAN_PRICE, MEDIUM_PLAN_PRICE, SUBSCRIPTION_PAY_ADDRESS} from "../config";
+import {LARGE_PLAN_PRICE, MEDIUM_PLAN_PRICE, SUBSCRIPTION_PAY_ADDRESS, MAIL_HOST, MAIL_ADDRESS, MAIL_PORT, MAIL_PASSWORD, MAIL_TO} from "../config";
 import {FeedbackDto} from "./dto/feedback.dto";
 
 @ApiBearerAuth()
@@ -307,16 +307,39 @@ export class UserController {
     }
   }
 
-  @UsePipes(new ValidationPipe())
-  @Post('users/feedback')
-  async sendFeedback(@Body('feedback') feedbackDto: FeedbackDto): Promise<any> {
-    try{
-        //TODO
-    } catch (error) {
-      console.log('error', error)
-      return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
-    }
-    return { user: { wallet: feedbackDto.wallet } }
-    }
+  // @UsePipes(new ValidationPipe())
+  // @Post('users/feedback')
+  // async sendFeedback(@Body('feedback') feedbackDto: FeedbackDto): Promise<any> {
+  //     try{
+  //       const nodemailer = require("nodemailer");
+  //
+  //       var transporter = nodemailer.createTransport({
+  //         service: 'gmail',
+  //         auth: {
+  //           user: MAIL_ADDRESS,
+  //           pass: MAIL_PASSWORD
+  //         }
+  //       });
+  //
+  //       var mailOptions = {
+  //         from: MAIL_ADDRESS,
+  //         to: MAIL_TO,
+  //         subject: 'Sending Email using Node.js',
+  //         text: feedbackDto.message
+  //       };
+  //
+  //       transporter.sendMail(mailOptions, function(error, info){
+  //         if (error) {
+  //           console.log(error);
+  //         } else {
+  //           console.log('Email sent: ' + info.response);
+  //         }
+  //       });
+  //     } catch (error) {
+  //       console.log('error', error)
+  //       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
+  //     }
+  //     return { status: true, user: { wallet: feedbackDto.wallet } }
+  //   }
 
   }

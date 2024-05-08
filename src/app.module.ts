@@ -6,8 +6,11 @@ import { AppController } from './app.controller';
 import { ObjectsModule } from './objects/objects.module';
 import { SearchModule } from './search/search.module';
 import { UserModule } from './user/user.module';
-import {AppConfig} from "./app.config";
-import {SettingsModule} from "./settings/settings.module";
+import { AppConfig } from "./app.config";
+import { SettingsModule } from "./settings/settings.module";
+import { MailerModule } from '@nestjs-modules/mailer';
+import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
+import { MailServerModule } from "./email/mail.module";
 
 @Module({
   controllers: [
@@ -18,10 +21,29 @@ import {SettingsModule} from "./settings/settings.module";
     ObjectsModule,
     SearchModule,
     UserModule,
+    MailServerModule,
     SettingsModule,
     ConfigModule.forRoot({
       isGlobal: true
-    })
+    }),
+    MailerModule.forRoot({
+      transport: {
+        host: String(process.env.MAIL_HOST),
+        port: Number(process.env.MAIL_PORT),
+        secure: true,
+        auth: {
+          user: process.env.MAIL_ADDRESS,
+          pass: process.env.MAIL_PASSWORD,
+        },
+      },
+      template: {
+        dir: __dirname + './template/notification',
+        adapter: new PugAdapter({  inlineCssEnabled: true,}),
+        options: {
+          strict: true,
+        },
+      },
+    }),
   ],
   providers: [AppConfig],
 })
