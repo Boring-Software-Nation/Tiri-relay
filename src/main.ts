@@ -7,7 +7,8 @@ import * as fs from "fs";
 import express, {Express} from 'express';
 import spdy from 'spdy';
 import {ServerOptions} from "spdy";
-import {USE_SSL} from "./config";
+import {USE_SSL, WEBSOCKET_PORT} from "./config";
+import { WebsocketModule } from './websocket.module';
 
 async function bootstrap() {
   const options = new DocumentBuilder()
@@ -41,6 +42,7 @@ async function bootstrap() {
     server.setTimeout(1000 * 60 * 30);
     server.headersTimeout = 0;
     server.requestTimeout = 0;
+
     const appOptions = {cors: true};
 
     const app: NestApplication = await NestFactory.create(
@@ -56,7 +58,27 @@ async function bootstrap() {
     await app.init();
     await server.listen(443);
   }
+
+  if (WEBSOCKET_PORT) {
+    const socketOptions = { cors: true };
+    if (USE_SSL) {
+      socketOptions['httpsOptions'] = {
+        key: fs.readFileSync('./test.key'),
+        cert: fs.readFileSync('./test.crt'),
+      };
+    }
+    const socketApp: NestApplication = await NestFactory.create(
+      WebsocketModule,
+      socketOptions
+    );
+    await socketApp.init();
+    await socketApp.listen(WEBSOCKET_PORT);
+    console.log(`Websocket server is running on port ${WEBSOCKET_PORT}`);
+  } else {
+    console.log('Websocket server is not running, WEBSOCKET_PORT is not set');
+  }
 }
+
 bootstrap()
   .catch((err) => {
     console.log(err);
