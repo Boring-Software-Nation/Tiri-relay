@@ -23,9 +23,10 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, appOptions);
     app.setGlobalPrefix('api');
 
-
     const document = SwaggerModule.createDocument(app, options);
     SwaggerModule.setup('/docs', app, document);
+
+    const io = WebsocketServer.getInstance(app.getHttpServer());
 
     await app.listen(3003);
   } else {
