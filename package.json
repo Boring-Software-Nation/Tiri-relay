@@ -74,7 +74,6 @@
     "@nestjs/platform-express": "^10.0.5",
     "@nestjs/platform-socket.io": "^10.4.15",
     "@nestjs/swagger": "^7.1.1",
-    "@nestjs/websockets": "^10.4.15",
     "@stablelib/base64": "^0.7.2",
     "@stablelib/utf8": "^0.10.1",
     "@types/spdy": "^3.4.5",

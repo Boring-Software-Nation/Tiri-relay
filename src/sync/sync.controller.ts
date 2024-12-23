@@ -16,9 +16,9 @@ export class SyncController {
   }
 
   @Put('tree')
-  async putTree(@Req() request: RequestWithUser, @Body() body: { tree: string }): Promise<void> {
+  async putTree(@Req() request: RequestWithUser, @Body() body: { tree: string, clientId: string }): Promise<void> {
     const userId = request.user.id;
     const treeBuffer = Buffer.from(body.tree, 'base64'); // Assuming the client sends the tree as a base64 string
-    await this.syncService.putTree(userId, treeBuffer);
+    await this.syncService.putTree(userId, treeBuffer, body.clientId);
   }
 }
