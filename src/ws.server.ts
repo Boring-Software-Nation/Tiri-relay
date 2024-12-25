@@ -10,7 +10,7 @@ export class WebsocketServer{
   static getInstance(httpServer?: HTTPServer): WebsocketServer {
     if (!WebsocketServer.instance) {
       if (!httpServer) {
-        throw new Error('HTTP server is required');
+        throw new Error('WS: HTTP server is required');
       }
       WebsocketServer.instance = new WebsocketServer(httpServer);
     }
@@ -22,25 +22,25 @@ export class WebsocketServer{
   constructor(httpServer: HTTPServer) {
     this.io = new IOServer(httpServer, { cors: { origin: '*' } });
     this.io.on('connection', (socket) => this.handleConnection(socket));
-    console.log("Websocket server has been created");
+    console.log("WS: Websocket server has been created");
   }
 
   async handleConnection(client: Socket) {
-    console.log('Client connected:', client.id);
+    //console.log('WS: Client connected:', client.id);
 
     try {
       const token = client.handshake.auth.token;
       const decoded: any = jwt.verify(token, AppConfig.get('AUTH_SECRET'));
-      console.log('Decoded auth:', decoded);
+      //console.log('WS: Decoded auth:', decoded);
       const em = AppConfig.orm.em.fork();
       const user = await em.findOne<User>('User', { id: decoded.id });
       if (!user) {
-        throw new Error('User not found.');
+        throw new Error(`User not found. ID: ${decoded.id}`);
       }
-      console.log('User authenticated:', user);
+      console.log('WS: User authenticated:', user.id);
       client.join(`user:${user.id}`);
     } catch (err) {
-      console.error('Unauthorized WebSocket connection:', err.message);
+      console.error('WS: Unauthorized WebSocket connection:', err.message);
       client.disconnect();
     }
   }

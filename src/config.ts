@@ -22,4 +22,3 @@ export const MAIL_PORT=process.env.MAIL_PORT
 export const MAIL_ADDRESS=process.env.MAIL_ADDRESS
 export const MAIL_PASSWORD=process.env.MAIL_PASSWORD
 export const MAIL_TO=process.env.MAIL_TO
-export const WEBSOCKET_PORT=process.env.WEBSOCKET_PORT
