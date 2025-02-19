@@ -131,6 +131,11 @@ export class UserService {
     return this.buildUserROSimple(user);
   }
 
+  async trialUsed(userId: number): Promise<boolean> {
+    const user = await this.userRepository.findOne(userId);
+    return user?.was_trial||false;
+  }
+
   generateJWT(user) {
     const today = new Date();
     const exp = new Date(today);
