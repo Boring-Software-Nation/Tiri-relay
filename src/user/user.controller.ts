@@ -116,6 +116,7 @@ export class UserController {
       if (subscriptionsData.data.subscriptions.length > 0) {
         const currentSubscription = subscriptionsData.data.subscriptions[0];
         wasPreviousSubscription = true;
+        //console.log('currentSubscription:', currentSubscription)
 
         if (currentSubscription.plan_code === 'TRIAL') {
           alreadyPaid = 0;
@@ -237,10 +238,36 @@ export class UserController {
         return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
       }
 
+      const subscriptionsData = await apiLago.subscriptions.findAllSubscriptions({
+        external_customer_id: subscribeUserDto.wallet,
+      })
+      //console.log('cancel_subscribe: subscriptionsData:', subscriptionsData.data.subscriptions);
+
       await apiLago.subscriptions.destroySubscription({externalId: 'sub_'+subscribeUserDto.wallet/*, status: 'pending'*/})
 
+      let plan_code = 'NONE';
+
+      if (subscriptionsData.data.subscriptions.length > 0) {
+        const cancelledSubscription = subscriptionsData.data.subscriptions[0];
+        //console.log('cancelledSubscription:', cancelledSubscription)
+        plan_code = (cancelledSubscription.next_plan_code ? cancelledSubscription.plan_code : cancelledSubscription.previous_plan_code) || 'NONE';
+        console.log('rollback plan code:', plan_code)
+
+        if (plan_code !== 'NONE') {
+          await apiLago.subscriptions.createSubscription({
+            subscription: {
+              external_customer_id: subscribeUserDto.wallet,
+              plan_code: plan_code,
+              external_id: 'sub_' + subscribeUserDto.wallet,
+              billing_time: 'anniversary',
+              subscription_at: cancelledSubscription.subscription_at,
+            }
+          });
+        }
+      }
+
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
-      await this.userService.update(userData.user.id, {plan_code: 'NONE'})
+      await this.userService.update(userData.user.id, { plan_code })
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
@@ -262,7 +289,7 @@ export class UserController {
           was_trial: userData.user.was_trial || result.data.subscriptions[0].plan_code === 'TRIAL'
         })
       }
-      console.log('subscriptions:', result)
+      //console.log('subscriptions:', result)
       return result.data;
     } catch (error) {
       console.log('error post users/subscriptions:', error)
