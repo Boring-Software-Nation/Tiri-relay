@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, HttpException, Param, Post, Put, UsePipes } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpException, Param, Post, Put, Req, UsePipes } from '@nestjs/common';
 import { ValidationPipe } from '../shared/pipes/validation.pipe';
 import { CreateUserDto, LoginUserDto, UpdateUserDto } from './dto';
 import { User } from './user.decorator';
-import {ICanCreateUserRO, IUserRO} from './user.interface';
+import {ICanCreateUserRO, IUserData, IUserRO} from './user.interface';
 import { UserService } from './user.service';
 import {api as apiLago} from "../services-lago";
 import {
@@ -14,6 +14,7 @@ import {SubscriptionDto} from "./dto/subscription.dto";
 import {SubscriptionUsageEventDto} from "./dto/subscription-usage-event.dto";
 import {LARGE_PLAN_PRICE, MEDIUM_PLAN_PRICE, SUBSCRIPTION_PAY_ADDRESS, MAIL_HOST, MAIL_ADDRESS, MAIL_PORT, MAIL_PASSWORD, MAIL_TO} from "../config";
 import {FeedbackDto} from "./dto/feedback.dto";
+import { Request } from 'express';
 
 @ApiBearerAuth()
 @ApiTags('user')
@@ -25,6 +26,12 @@ export class UserController {
   @Get('user')
   async findMe(@User('wallet') wallet: string): Promise<IUserRO> {
     return this.userService.findByWallet(wallet);
+  }
+
+  @Get('trialUsed')
+  async trialUsed(@Req() request: Request & { user?: IUserData & { id?: number } }): Promise<any> {
+    const userId = request.user.id;
+    return this.userService.trialUsed(userId);
   }
 
   @Put('user')
@@ -109,6 +116,7 @@ export class UserController {
       if (subscriptionsData.data.subscriptions.length > 0) {
         const currentSubscription = subscriptionsData.data.subscriptions[0];
         wasPreviousSubscription = true;
+        //console.log('currentSubscription:', currentSubscription)
 
         if (currentSubscription.plan_code === 'TRIAL') {
           alreadyPaid = 0;
@@ -209,7 +217,7 @@ export class UserController {
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
       await this.userService.update(userData.user.id, {
         plan_code: subscribeUserDto.subscriptionCode,
-        was_trial: subscribeUserDto.subscriptionCode === 'TRIAL'
+        was_trial: userData.user.was_trial || subscribeUserDto.subscriptionCode === 'TRIAL'
       })
     } catch (error) {
       console.log('error', error)
@@ -230,10 +238,36 @@ export class UserController {
         return {status: 400, statusText: 'Bad Request', data: {error: ['Invalid subscription data']}}
       }
 
+      const subscriptionsData = await apiLago.subscriptions.findAllSubscriptions({
+        external_customer_id: subscribeUserDto.wallet,
+      })
+      //console.log('cancel_subscribe: subscriptionsData:', subscriptionsData.data.subscriptions);
+
       await apiLago.subscriptions.destroySubscription({externalId: 'sub_'+subscribeUserDto.wallet/*, status: 'pending'*/})
 
+      let plan_code = 'NONE';
+
+      if (subscriptionsData.data.subscriptions.length > 0) {
+        const cancelledSubscription = subscriptionsData.data.subscriptions[0];
+        //console.log('cancelledSubscription:', cancelledSubscription)
+        plan_code = (cancelledSubscription.next_plan_code ? cancelledSubscription.plan_code : cancelledSubscription.previous_plan_code) || 'NONE';
+        console.log('rollback plan code:', plan_code)
+
+        if (plan_code !== 'NONE') {
+          await apiLago.subscriptions.createSubscription({
+            subscription: {
+              external_customer_id: subscribeUserDto.wallet,
+              plan_code: plan_code,
+              external_id: 'sub_' + subscribeUserDto.wallet,
+              billing_time: 'anniversary',
+              subscription_at: cancelledSubscription.subscription_at,
+            }
+          });
+        }
+      }
+
       const userData = await this.userService.findUserByWallet(subscribeUserDto.wallet)
-      await this.userService.update(userData.user.id, {plan_code: 'NONE'})
+      await this.userService.update(userData.user.id, { plan_code })
     } catch (error) {
       console.log('error', error)
       return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
@@ -252,13 +286,13 @@ export class UserController {
       if (!userData.user.plan_code && result.data.subscriptions.length > 0) {
         await this.userService.update(userData.user.id, {
           plan_code: result.data.subscriptions[0].plan_code,
-          was_trial: result.data.subscriptions[0].plan_code === 'TRIAL'
+          was_trial: userData.user.was_trial || result.data.subscriptions[0].plan_code === 'TRIAL'
         })
       }
-      console.log(result)
+      //console.log('subscriptions:', result)
       return result.data;
     } catch (error) {
-      console.log('error', error)
+      console.log('error post users/subscriptions:', error)
       if (error.response) {
         return {status: error.response.status, statusText: error.response.statusText, data: error.response.data}
       } else {
