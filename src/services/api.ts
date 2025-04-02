@@ -2249,6 +2249,7 @@ export interface WalletSendCreatePayload {
 
 import type { AxiosInstance, AxiosRequestConfig, AxiosResponse, HeadersDefaults, ResponseType } from 'axios';
 import axios from 'axios';
+import { Blob, File, FormData } from "formdata-node";
 
 export type QueryParamsType = Record<string | number, any>;
 
@@ -2282,6 +2283,7 @@ export enum ContentType {
   FormData = 'multipart/form-data',
   UrlEncoded = 'application/x-www-form-urlencoded',
   Text = 'text/plain',
+  Binary = 'application/octet-stream',
 }
 
 export class HttpClient<SecurityDataType = unknown> {
@@ -2359,7 +2361,7 @@ export class HttpClient<SecurityDataType = unknown> {
     const requestParams = this.mergeRequestParams(params, secureParams);
     const responseFormat = format || this.format || undefined;
 
-    if (type === ContentType.FormData && body && body !== null && typeof body === 'object') {
+    if (type === ContentType.FormData && body && body !== null && typeof body === 'object' && !(body instanceof Buffer)) {
       body = this.createFormData(body as Record<string, unknown>);
     }
 
