@@ -297,11 +297,14 @@ export class ObjectsController {
 
       let serviceName = 'bus';
       const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api`};
+      params['format'] = 'arraybuffer';
+      params['type'] = ContentType.Binary;
+
       let objDataResponse;
       let decreaseVol = 0;
       try {
         objDataResponse = await api.worker.objectDetail({ key: path, bucket: 'tiri' }, params);
-        decreaseVol = -1 * objDataResponse.data.object.size
+        decreaseVol = -1 * Buffer.byteLength(objDataResponse.data)
       } catch (error) {
         console.log('error', error)
         return {
