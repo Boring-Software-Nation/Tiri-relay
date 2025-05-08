@@ -52,14 +52,15 @@ export class ObjectsController {
         serviceName = query.serviceName;
     }
 
-    const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api/${serviceName}`};
+    const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api`};
     if (query.format === 'blob') {
        params['format'] = 'arraybuffer';
+       params['type'] = ContentType.Binary;
     }
 
     let r;
     try {
-      r = await api.objects.objectsDetail(path, params);
+      r = await api.worker.objectDetail({ key: path, bucket: 'tiri' }, params);
     } catch (error) {
         console.log('error', error)
         return {
@@ -146,7 +147,7 @@ export class ObjectsController {
           }
           let formData = null;
           const headers = {
-            'Content-Type': ContentType.Text,
+            'Content-Type': ContentType.Binary,
           }
 
           if (accumulatedData) {
@@ -233,8 +234,8 @@ export class ObjectsController {
 
 
           console.log('Start uploading file')
-          r = await api.objects.objectsUpdate(path, formData, {
-            baseURL: `${this.configService.get<string>('API_HOST')}/api/worker`,
+          r = await api.worker.objectUpdate({ key: path, bucket: 'tiri' }, formData, {
+            baseURL: `${this.configService.get<string>('API_HOST')}/api`,
             type:  accumulatedData ? ContentType.FormData : ContentType.Text,
             headers: headers
           });
@@ -295,12 +296,15 @@ export class ObjectsController {
       }
 
       let serviceName = 'bus';
-      const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api/${serviceName}`};
+      const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api`};
+      params['format'] = 'arraybuffer';
+      params['type'] = ContentType.Binary;
+
       let objDataResponse;
       let decreaseVol = 0;
       try {
-        objDataResponse = await api.objects.objectsDetail(path, params);
-        decreaseVol = -1 * objDataResponse.data.object.size
+        objDataResponse = await api.worker.objectDetail({ key: path, bucket: 'tiri' }, params);
+        decreaseVol = -1 * Buffer.byteLength(objDataResponse.data)
       } catch (error) {
         console.log('error', error)
         return {
@@ -309,7 +313,7 @@ export class ObjectsController {
           data: error.response?.data ? error.response.data : ''}
       }
 
-      r = await api.objects.objectsDelete2(path,  {baseURL: `${this.configService.get<string>('API_HOST')}/api/bus`});
+      r = await api.worker.objectDelete({ key: path, bucket: 'tiri' },  {baseURL: `${this.configService.get<string>('API_HOST')}/api`});
 
       if (decreaseVol < 0) {
         console.log('Register decrease volume for user', wallet)

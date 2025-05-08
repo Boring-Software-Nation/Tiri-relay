@@ -9,6 +9,7 @@ console.log('CONFIG.API_HOST', API_HOST)
 export const api = new Api({
   baseURL: `${API_HOST}`,
   securityWorker: token => token ? { headers: { authorization: `Basic ${token}` } } : {},
+  secure: true,
 })
 
 setAuthorizationToken(API_PASSWORD)
