@@ -23,8 +23,8 @@ export class User {
   @Property()
   wallet: string;
 
-  @Property({ hidden: true })
-  password: string;
+  //@Property({ hidden: true })
+  //password: string;
 
   @Property({nullable: true})
   pay_wallet_id: string;
@@ -43,7 +43,7 @@ export class User {
 
   constructor(wallet: string, password: string) {
     this.wallet = wallet;
-    this.password = crypto.createHmac('sha256', password).digest('hex');
+    //this.password = crypto.createHmac('sha256', password).digest('hex');
   }
 
   toJSON(user?: User) {

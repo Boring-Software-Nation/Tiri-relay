@@ -49,7 +49,7 @@ export class UserService {
   async findOne(loginUserDto: LoginUserDto): Promise<User> {
     const findOneOptions = {
       wallet: loginUserDto.wallet,
-      password: crypto.createHmac('sha256', loginUserDto.password).digest('hex'),
+      //password: crypto.createHmac('sha256', loginUserDto.password).digest('hex'),
     };
 
     return this.userRepository.findOne(findOneOptions);
