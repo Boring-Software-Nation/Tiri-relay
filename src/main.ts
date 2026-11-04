@@ -8,6 +8,7 @@ import express, {Express} from 'express';
 import spdy from 'spdy';
 import {ServerOptions} from "spdy";
 import {USE_SSL} from "./config";
+import { WebsocketServer } from './ws.server';
 
 async function bootstrap() {
   const options = new DocumentBuilder()
@@ -22,9 +23,10 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule, appOptions);
     app.setGlobalPrefix('api');
 
-
     const document = SwaggerModule.createDocument(app, options);
     SwaggerModule.setup('/docs', app, document);
+
+    const io = WebsocketServer.getInstance(app.getHttpServer());
 
     await app.listen(3003);
   } else {
@@ -41,6 +43,7 @@ async function bootstrap() {
     server.setTimeout(1000 * 60 * 30);
     server.headersTimeout = 0;
     server.requestTimeout = 0;
+
     const appOptions = {cors: true};
 
     const app: NestApplication = await NestFactory.create(
@@ -53,10 +56,13 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, options);
     SwaggerModule.setup('/docs', app, document);
 
+    const io = WebsocketServer.getInstance(server);
+
     await app.init();
     await server.listen(443);
   }
 }
+
 bootstrap()
   .catch((err) => {
     console.log(err);

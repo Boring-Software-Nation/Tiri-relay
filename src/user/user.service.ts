@@ -49,7 +49,7 @@ export class UserService {
   async findOne(loginUserDto: LoginUserDto): Promise<User> {
     const findOneOptions = {
       wallet: loginUserDto.wallet,
-      password: crypto.createHmac('sha256', loginUserDto.password).digest('hex'),
+      //password: crypto.createHmac('sha256', loginUserDto.password).digest('hex'),
     };
 
     return this.userRepository.findOne(findOneOptions);
@@ -129,6 +129,11 @@ export class UserService {
   async findUserByWallet(wallet: string): Promise<IUserROSimple> {
     const user = await this.userRepository.findOneOrFail({ wallet });
     return this.buildUserROSimple(user);
+  }
+
+  async trialUsed(userId: number): Promise<boolean> {
+    const user = await this.userRepository.findOne(userId);
+    return user?.was_trial||false;
   }
 
   generateJWT(user) {

@@ -31,7 +31,9 @@ export class SearchController {
     const params = {baseURL: `${this.configService.get<string>('API_HOST')}/api/${serviceName}`};
     let r;
     try {
-      r = await api.search.objectsList(query, params);
+      // FIXME
+      //r = await api.search.objectsList(query, params);
+      r = {status: 200, data: {}}
     } catch (error) {
       console.log('error', error)
       return {
