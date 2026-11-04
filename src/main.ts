@@ -12,8 +12,8 @@ import { WebsocketServer } from './ws.server';
 
 async function bootstrap() {
   const options = new DocumentBuilder()
-      .setTitle('SIA Data Wallet API')
-      .setDescription('SIA Data Wallet API description')
+      .setTitle('Tiri Relay API')
+      .setDescription('Tiri Relay API: sync tree, WebSocket notifications and user accounts for Tiri Vault')
       .setVersion('1.0')
       .addBearerAuth()
       .build();

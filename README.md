@@ -38,13 +38,12 @@ This ensures that all user devices remain in sync, providing a seamless and dece
 
 # Tiri Relay
 
-This is repository contains Tiri Relay intermediary server.  
+This repository contains Tiri Relay intermediary server.  
 Related repos:  
-[Tiri Vault Desktop](https://github.com/Boring-Software-Nation/Tiri-vault-desktop)  
-[Tiri Vault browser extension](https://github.com/Boring-Software-Nation/Tiri-vault-extension) *currently not supported
+[Tiri Vault Desktop](https://github.com/Boring-Software-Nation/Tiri-vault-desktop)
 
 ## Disclaimer
-Thу work is in progress.
+The work is in progress.
 
 ## How To & Dependencies
 

@@ -1,7 +1,7 @@
 {
-  "name": "sia-data-wallet-api",
+  "name": "tiri-relay",
   "version": "1.0.0",
-  "description": "SIA Data Wallet API",
+  "description": "Tiri Relay: sync and notification server for Tiri Vault",
   "main": "index.js",
   "scripts": {
     "start": "nest start",
@@ -18,14 +18,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://git.bsn.si/project/arcdata/server.git"
+    "url": "git+https://github.com/Boring-Software-Nation/Tiri-relay.git"
   },
   "author": "author@gmail.com",
   "license": "MIT",
   "bugs": {
-    "url": "https://git.bsn.si/project/arcdata/server/-/issues"
+    "url": "https://github.com/Boring-Software-Nation/Tiri-relay/issues"
   },
-  "homepage": "https://git.bsn.si/project/arcdata/server#readme",
+  "homepage": "https://github.com/Boring-Software-Nation/Tiri-relay#readme",
   "renovate": {
     "extends": [
       "config:base",
