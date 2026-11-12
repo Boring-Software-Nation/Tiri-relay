@@ -1,42 +1,14 @@
-import { IsEmail } from 'class-validator';
-import crypto from 'crypto';
-import {
-  Collection,
-  Entity, EntityDTO,
-  EntityRepositoryType,
-  ManyToMany,
-  OneToMany,
-  PrimaryKey,
-  Property,
-  wrap,
-} from '@mikro-orm/core';
-import { SettingsRepository } from './settings.repository';
+import { Entity, PrimaryKey, Property } from '@mikro-orm/core';
 
-@Entity({ customRepository: () => SettingsRepository })
+/** Simple key/value settings, e.g. key "last_version". */
+@Entity({ tableName: 'settings' })
 export class Settings {
-
-  [EntityRepositoryType]?: SettingsRepository;
-
   @PrimaryKey()
-  id: number;
+  id!: number;
 
-  @Property()
-  key: string;
+  @Property({ nullable: true })
+  key?: string;
 
-  @Property()
-  value: string;
-
-  constructor() {
-  }
-
-  toJSON(settings?: Settings) {
-    const o = wrap<Settings>(this).toObject() as SettingsDTO;
-
-    return o;
-  }
-
-}
-
-interface SettingsDTO extends EntityDTO<Settings> {
-  last_version: string;
+  @Property({ type: 'text', nullable: true })
+  value?: string;
 }
