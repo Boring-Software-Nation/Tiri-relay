@@ -1,19 +1,18 @@
-version: "3.4"
-
+# Local database for development and tests:  docker compose up -d
 services:
   mysql:
-    image: mysql:8.1
-    platform: linux/x86_64
+    image: mysql:8.4
     restart: unless-stopped
     ports:
-      - 3307:3306
+      - "3306:3306"
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: 1
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: tiri_relay
+      MYSQL_USER: tiri
+      MYSQL_PASSWORD: tiri
     volumes:
       - mysql:/var/lib/mysql
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
 volumes:
   mysql:
-    driver_opts:
-      type: tmpfs
-      device: tmpfs

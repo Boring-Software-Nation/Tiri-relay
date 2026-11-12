@@ -1,26 +1,10 @@
-import { MiddlewareConsumer, Module, NestModule, RequestMethod } from '@nestjs/common';
-import { AuthMiddleware } from '../user/auth.middleware';
-import { UserModule } from '../user/user.module';
+import { Module } from '@nestjs/common';
+import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { SettingsController } from './settings.controller';
-import {MikroOrmModule} from "@mikro-orm/nestjs";
-import {User} from "../user/user.entity";
-import {Settings} from "./settings.entity";
-
+import { Settings } from './settings.entity';
 
 @Module({
-  controllers: [
-    SettingsController,
-  ],
-  imports: [UserModule, MikroOrmModule.forFeature({ entities: [Settings] })],
-  providers: [],
+  controllers: [SettingsController],
+  imports: [MikroOrmModule.forFeature({ entities: [Settings] })],
 })
-export class SettingsModule implements NestModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(AuthMiddleware)
-      .forRoutes(
-        { path: 'settings/:wallet/subscription', method: RequestMethod.GET },
-        { path: 'settings/version', method: RequestMethod.GET },
-      );
-  }
-}
+export class SettingsModule {}

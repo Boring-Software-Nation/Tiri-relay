@@ -1,69 +1,59 @@
-import {NestApplication, NestFactory} from '@nestjs/core';
+import { INestApplication } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AppModule } from './app.module';
-import {ExpressAdapter} from "@nestjs/platform-express";
-import {Server} from "https";
-import * as fs from "fs";
-import express, {Express} from 'express';
+import { ExpressAdapter, NestExpressApplication } from '@nestjs/platform-express';
+import express from 'express';
+import * as fs from 'fs';
 import spdy from 'spdy';
-import {ServerOptions} from "spdy";
-import {USE_SSL} from "./config";
+import { AppModule } from './app.module';
+import { MAX_TREE_BYTES, PORT, USE_SSL } from './config';
 import { WebsocketServer } from './ws.server';
 
-async function bootstrap() {
+/** Shared setup for the HTTP app; also used by the tests. */
+export function configureApp(app: INestApplication) {
+  app.setGlobalPrefix('api');
+  // The encrypted tree is sent as base64 (≈4/3 of its size) inside JSON.
+  (app as NestExpressApplication).useBodyParser('json', { limit: Math.ceil(MAX_TREE_BYTES * 1.4) + 1024 });
+
   const options = new DocumentBuilder()
-      .setTitle('Tiri Relay API')
-      .setDescription('Tiri Relay API: sync tree, WebSocket notifications and user accounts for Tiri Vault')
-      .setVersion('1.0')
-      .addBearerAuth()
-      .build();
+    .setTitle('Tiri Relay API')
+    .setDescription('Wallet sign-in, encrypted sync tree and change notifications for Tiri Vault')
+    .setVersion('2.0')
+    .addBearerAuth()
+    .build();
+  SwaggerModule.setup('/docs', app, SwaggerModule.createDocument(app, options));
+}
 
+async function bootstrap() {
   if (USE_SSL === 'false') {
-    const appOptions = { cors: true };
-    const app = await NestFactory.create(AppModule, appOptions);
-    app.setGlobalPrefix('api');
-
-    const document = SwaggerModule.createDocument(app, options);
-    SwaggerModule.setup('/docs', app, document);
-
-    const io = WebsocketServer.getInstance(app.getHttpServer());
-
-    await app.listen(3003);
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true, bodyParser: false });
+    configureApp(app);
+    WebsocketServer.init(app.getHttpServer());
+    await app.listen(PORT);
+    console.log(`Tiri Relay listening on http://localhost:${PORT} (API docs at /docs)`);
   } else {
-    // Alternative to spdy server: https://docs.nestjs.com/faq/multiple-servers#multiple-simultaneous-servers
-    const expressApp: Express = express();
-
-    // https://github.com/spdy-http2/node-spdy
-    const spdyOpts: ServerOptions = {
-      key: fs.readFileSync('./test.key'),
-      cert: fs.readFileSync('./test.crt'),
-    };
-
-    const server: Server = spdy.createServer(spdyOpts, expressApp);
-    server.setTimeout(1000 * 60 * 30);
-    server.headersTimeout = 0;
-    server.requestTimeout = 0;
-
-    const appOptions = {cors: true};
-
-    const app: NestApplication = await NestFactory.create(
-        AppModule,
-        new ExpressAdapter(expressApp),
-        appOptions
+    const expressApp = express();
+    const server = spdy.createServer(
+      { key: fs.readFileSync('./test.key'), cert: fs.readFileSync('./test.crt') },
+      expressApp,
     );
-    app.setGlobalPrefix('api');
+    server.setTimeout(1000 * 60 * 30);
 
-    const document = SwaggerModule.createDocument(app, options);
-    SwaggerModule.setup('/docs', app, document);
-
-    const io = WebsocketServer.getInstance(server);
-
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, new ExpressAdapter(expressApp), {
+      cors: true,
+      bodyParser: false,
+    });
+    configureApp(app);
+    WebsocketServer.init(server as any);
     await app.init();
-    await server.listen(443);
+    server.listen(443);
+    console.log('Tiri Relay listening on https://localhost:443 (API docs at /docs)');
   }
 }
 
-bootstrap()
-  .catch((err) => {
-    console.log(err);
+if (require.main === module) {
+  bootstrap().catch((err) => {
+    console.error(err);
+    process.exit(1);
   });
+}

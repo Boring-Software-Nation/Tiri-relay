@@ -38,42 +38,80 @@ This ensures that all user devices remain in sync, providing a seamless and dece
 
 # Tiri Relay
 
-This repository contains Tiri Relay intermediary server.  
-Related repos:  
-[Tiri Vault Desktop](https://github.com/Boring-Software-Nation/Tiri-vault-desktop)
+This repository contains the Tiri Relay server.
+Related repo: [Tiri Vault Desktop](https://github.com/Boring-Software-Nation/Tiri-vault-desktop)
 
-## Disclaimer
-The work is in progress.
+> **Status:** Tiri Vault is moving from Sia to [Filecoin Onchain Cloud](https://docs.filecoin.cloud/). The relay no longer handles any file data: devices store encrypted files directly with Filecoin storage providers, paid from the user's own wallet.
 
-## How To & Dependencies
+## What the relay does
+
+| | |
+|---|---|
+| **Wallet sign-in** | Users are identified by their wallet address. The app signs a one-time challenge ([EIP-4361](https://eips.ethereum.org/EIPS/eip-4361) format, no transaction, no fee); the relay checks the signature locally and issues a session token. No passwords or emails. |
+| **Encrypted file tree** | Stores each user's encrypted file tree with a **version number**. An update is accepted only if it is based on the current version (compare-and-swap); otherwise `409` with `currentVersion`, and the device merges and retries. The relay can't read the tree. |
+| **Change notifications** | Socket.IO: a device connects with its session token and receives `treeUpdated { clientId, version }` when another device stores a new version. |
+| **Filecoin network** | Read-only connection (Calibration testnet or mainnet), checked by `/api/health`. Used by billing (coming next); sign-in and sync don't need it. |
+
+## Requirements
+
+- Node.js 20 or newer
+- MySQL 8 or MariaDB 10.6+ (`docker compose up -d` starts one with the right databases)
+
+## Run locally
 
 ```bash
-nvm use 19.2
-npm run start:dev
+docker compose up -d          # MySQL on 127.0.0.1:3306, databases tiri_relay and tiri_relay_test
+cp .env.example .env          # then set AUTH_SECRET (the file says how to generate one)
+npm install
+npm run build
+npm run start:prod            # or: npm run start:dev  (watch mode)
 ```
 
-```bash
-npx swagger-typescript-api -p ./src/services/openapi.yml -o ./src/services -n api.ts --axios --extract-response-error --extract-request-body --extract-request-params
-```
+The relay applies database migrations on start. Then:
 
-- test.key
-- test.crt
+- API: `http://localhost:3003/api`
+- API docs (Swagger): `http://localhost:3003/docs`
+- Health: `curl http://localhost:3003/api/health`
+
+For HTTPS on port 443 set `USE_SSL=true` and provide `test.key` / `test.crt`:
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 -keyout test.key -out test.crt
-
-curl -I -k https://localhost:443/
 ```
 
-## .env file
+## API
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `POST` | `/api/auth/challenge` | – | `{ address }` → `{ message, nonce, expiresAt }`; the wallet signs `message` |
+| `POST` | `/api/auth/verify` | – | `{ address, nonce, signature }` → `{ token, expiresAt, user }` |
+| `GET` | `/api/auth/me` | Bearer | The signed-in wallet |
+| `GET` | `/api/sync/tree` | Bearer | `{ tree (base64) \| null, version, updatedAt }`; version 0 = no tree yet |
+| `PUT` | `/api/sync/tree` | Bearer | `{ tree, baseVersion, clientId }` → `{ version }`, or `409 { currentVersion }` |
+| `GET` | `/api/health` | – | Database and Filecoin network status |
+| `GET` | `/api/settings/version` | – | Latest desktop app version |
+| `POST` | `/api/mail/feedback` | – | In-app feedback by email |
+
+Socket.IO: connect with `auth: { token }`; event `treeUpdated { clientId, version }`.
+
+### Signing in from a client (viem)
+
+```ts
+const { message, nonce } = await post('/api/auth/challenge', { address: account.address })
+const signature = await account.signMessage({ message })
+const { token } = await post('/api/auth/verify', { address: account.address, nonce, signature })
+// then: Authorization: Bearer <token>
+```
+
+## Tests
+
+The tests run against a real database that they wipe: by default `tiri:tiri@127.0.0.1:3306/tiri_relay_test` (override with `TEST_DB_HOST`, `TEST_DB_PORT`, `TEST_DB_USER`, `TEST_DB_PASSWORD`, `TEST_DB_NAME`).
 
 ```bash
-AUTH_SECRET=
-API_PASSWORD=
-API_HOST=http://127.0.0.1:9880
-MIKRO_ORM_HOST=127.0.0.1
-MIKRO_ORM_PORT=3306
-MIKRO_ORM_USER=
-MIKRO_ORM_PASSWORD=
-MIKRO_ORM_DB_NAME=
+docker compose up -d
+npm test
 ```
+
+## Upgrading an existing Sia-era database
+
+The migration `Migration20261112000000` renames the old `user` and `sync` tables to `legacy_user` and `legacy_sync` instead of deleting them, because old accounts (a hash of a Sia seed) can't be mapped to wallet addresses. **`legacy_user.pay_wallet_seed` contains Sia seeds in plain text**: recover anything you need from it, then drop both legacy tables. `npm run migration:down` restores the old tables.

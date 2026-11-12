@@ -1,14 +1,12 @@
 {
-  "moduleFileExtensions": [
-    "ts",
-    "tsx",
-    "js",
-    "json"
-  ],
+  "moduleFileExtensions": ["ts", "js", "json"],
   "transform": {
-    "^.+\\.tsx?$": "ts-jest"
+    "^.+\\.ts$": ["ts-jest", { "tsconfig": "tsconfig.test.json" }]
   },
-  "testRegex": "/src/.*\\.(test|spec).(ts|tsx|js)$",
-  "collectCoverageFrom" : ["src/**/*.{js,jsx,tsx,ts}", "!**/node_modules/**", "!**/vendor/**"],
-  "coverageReporters": ["json", "lcov"]
+  "testRegex": "/(src|test)/.*\\.(test|spec)\\.ts$",
+  "setupFiles": ["<rootDir>/test/setup-env.js"],
+  "testEnvironment": "node",
+  "testTimeout": 30000,
+  "collectCoverageFrom": ["src/**/*.ts", "!src/migrations/**"],
+  "coverageReporters": ["text-summary", "lcov"]
 }

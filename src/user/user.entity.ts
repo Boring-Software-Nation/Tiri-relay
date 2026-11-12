@@ -1,60 +1,25 @@
-import { IsEmail } from 'class-validator';
-import crypto from 'crypto';
-import {
-  Collection,
-  Entity, EntityDTO,
-  EntityRepositoryType,
-  ManyToMany,
-  OneToMany,
-  PrimaryKey,
-  Property,
-  wrap,
-} from '@mikro-orm/core';
-import { UserRepository } from './user.repository';
+import { Entity, PrimaryKey, Property } from '@mikro-orm/core';
 
-@Entity({ customRepository: () => UserRepository })
+/**
+ * A Tiri user is identified only by their wallet address. There are no passwords
+ * or emails: the user proves ownership by signing a sign-in challenge.
+ */
+@Entity({ tableName: 'user' })
 export class User {
-
-  [EntityRepositoryType]?: UserRepository;
-
   @PrimaryKey()
-  id: number;
+  id!: number;
+
+  /** EIP-55 checksummed address, e.g. 0xf39F...2266 */
+  @Property({ length: 42, unique: true })
+  address!: string;
 
   @Property()
-  wallet: string;
+  createdAt: Date = new Date();
 
-  //@Property({ hidden: true })
-  //password: string;
+  @Property({ nullable: true })
+  lastLoginAt?: Date;
 
-  @Property({nullable: true})
-  pay_wallet_id: string;
-
-  @Property({nullable: true})
-  pay_wallet_seed: string;
-
-  @Property({nullable: true})
-  pay_addresses: string;
-
-  @Property({nullable: true})
-  plan_code: string;
-
-  @Property({nullable: true})
-  was_trial: boolean;
-
-  constructor(wallet: string, password: string) {
-    this.wallet = wallet;
-    //this.password = crypto.createHmac('sha256', password).digest('hex');
+  constructor(address: string) {
+    this.address = address;
   }
-
-  toJSON(user?: User) {
-    const o = wrap<User>(this).toObject() as UserDTO;
-
-    return o;
-  }
-
-}
-
-interface UserDTO extends EntityDTO<User> {
-  pay_wallet_id: string;
-  addresses: string;
 }

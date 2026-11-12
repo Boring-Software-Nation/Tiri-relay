@@ -1,19 +1,24 @@
-import { LoadStrategy } from '@mikro-orm/core';
+import { config } from 'dotenv';
 import { defineConfig } from '@mikro-orm/mysql';
-import { SqlHighlighter } from '@mikro-orm/sql-highlighter';
-import { TsMorphMetadataProvider } from '@mikro-orm/reflection';
 import { Migrator } from '@mikro-orm/migrations';
-import { EntityGenerator } from '@mikro-orm/entity-generator';
-import { SeedManager } from '@mikro-orm/seeder';
+import { User } from './user/user.entity';
+import { Sync } from './sync/sync.entity';
+import { AuthChallenge } from './auth/auth-challenge.entity';
+import { Settings } from './settings/settings.entity';
 
+config();
+
+// Connection settings come from the environment: MIKRO_ORM_HOST, MIKRO_ORM_PORT,
+// MIKRO_ORM_USER, MIKRO_ORM_PASSWORD, MIKRO_ORM_DB_NAME (see .env.example).
 export default defineConfig({
-  entities: ['dist/**/*.entity.js'],
-  entitiesTs: ['src/**/*.entity.ts'],
-  debug: true,
-  loadStrategy: LoadStrategy.JOINED,
-  highlighter: new SqlHighlighter(),
-  metadataProvider: TsMorphMetadataProvider,
+  entities: [User, Sync, AuthChallenge, Settings],
+  debug: process.env.MIKRO_ORM_DEBUG === 'true',
   // @ts-expect-error nestjs adapter option
   registerRequestContext: false,
-  extensions: [Migrator, EntityGenerator, SeedManager],
+  migrations: {
+    path: 'dist/migrations',
+    pathTs: 'src/migrations',
+    snapshot: false,
+  },
+  extensions: [Migrator],
 });
