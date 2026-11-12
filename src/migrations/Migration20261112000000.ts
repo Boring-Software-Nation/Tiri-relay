@@ -3,15 +3,13 @@ import { Migration } from '@mikro-orm/migrations';
 /**
  * Wallet sign-in and versioned sync tree (Filecoin migration).
  *
- * Users are now identified by their wallet address, and old accounts (identified by a
- * hash of a Sia seed) can't be mapped to addresses. Nothing is deleted: the old tables
- * are renamed to legacy_user / legacy_sync so an operator can inspect, export and drop
- * them deliberately. NOTE: legacy_user.pay_wallet_seed holds Sia seeds in plain text;
- * drop that table once anything needed from it has been recovered.
+ * Users are now identified by their wallet address. Old accounts (a hash of a Sia seed)
+ * can't be mapped to addresses, and no Sia-era data is kept: the old tables are dropped.
  */
 export class Migration20261112000000 extends Migration {
   async up(): Promise<void> {
-    this.addSql('rename table `sync` to `legacy_sync`, `user` to `legacy_user`;');
+    this.addSql('drop table if exists `sync`;');
+    this.addSql('drop table if exists `user`;');
 
     this.addSql(
       'create table `user` (' +
@@ -54,6 +52,5 @@ export class Migration20261112000000 extends Migration {
     this.addSql('drop table if exists `auth_challenge`;');
     this.addSql('drop table if exists `sync`;');
     this.addSql('drop table if exists `user`;');
-    this.addSql('rename table `legacy_sync` to `sync`, `legacy_user` to `user`;');
   }
 }

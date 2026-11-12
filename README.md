@@ -112,6 +112,6 @@ docker compose up -d
 npm test
 ```
 
-## Upgrading an existing Sia-era database
+## Deployment
 
-The migration `Migration20261112000000` renames the old `user` and `sync` tables to `legacy_user` and `legacy_sync` instead of deleting them, because old accounts (a hash of a Sia seed) can't be mapped to wallet addresses. **`legacy_user.pay_wallet_seed` contains Sia seeds in plain text**: recover anything you need from it, then drop both legacy tables. `npm run migration:down` restores the old tables.
+See [DEPLOY.md](DEPLOY.md): one Scaleway server with Docker Compose (Caddy for HTTPS, the relay, MySQL), and GitHub Actions that test every pull request and deploy every merge to `main`.
