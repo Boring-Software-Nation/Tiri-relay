@@ -1,0 +1,6 @@
+# HTTPS with an automatic Let's Encrypt certificate for RELAY_DOMAIN.
+# Proxies the API and the WebSocket (Socket.IO) to the relay container.
+{$RELAY_DOMAIN} {
+	encode gzip
+	reverse_proxy relay:3003
+}

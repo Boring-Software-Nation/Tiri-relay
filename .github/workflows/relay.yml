@@ -1,0 +1,110 @@
+name: Relay CI/CD
+
+# Pull requests: build + tests.
+# Push to main: build + tests, then publish the Docker image to GitHub Container Registry
+# and, if the deploy secrets are set, update the server over SSH.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: relay-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/boring-software-nation/tiri-relay
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: tiri_relay_test
+          MYSQL_USER: tiri
+          MYSQL_PASSWORD: tiri
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=5s --health-timeout=5s --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run build
+      - run: npm test
+
+  image:
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: image
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Check deploy settings
+        id: cfg
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          if [ -z "$HOST" ]; then
+            echo "DEPLOY_HOST is not set; image published, skipping deployment."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update the server
+        if: steps.cfg.outputs.enabled == 'true'
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          TAG: sha-${{ github.sha }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/deploy_key && chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploy_key "$USER@$HOST" \
+            "cd /opt/tiri && RELAY_IMAGE=${IMAGE}:${TAG} docker compose pull relay && RELAY_IMAGE=${IMAGE}:${TAG} docker compose up -d && docker image prune -f"
+      - name: Check the relay answers
+        if: steps.cfg.outputs.enabled == 'true'
+        env:
+          URL: ${{ vars.RELAY_URL }}
+        run: |
+          [ -z "$URL" ] && { echo "Set the RELAY_URL variable to check health after deploys."; exit 0; }
+          for i in $(seq 1 30); do
+            if curl -fsS "$URL/api/health"; then echo; exit 0; fi
+            sleep 5
+          done
+          echo "Relay did not become healthy" >&2; exit 1

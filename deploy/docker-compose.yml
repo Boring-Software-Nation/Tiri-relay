@@ -1,0 +1,53 @@
+# Production stack for one server: HTTPS proxy + relay + MySQL.
+# Lives in /opt/tiri on the server, next to relay.env and Caddyfile (see DEPLOY.md).
+#
+#   docker compose up -d            start / update everything
+#   docker compose logs -f relay    follow relay logs
+
+services:
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file: relay.env # only RELAY_DOMAIN is used
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - relay
+
+  relay:
+    image: ${RELAY_IMAGE:-ghcr.io/boring-software-nation/tiri-relay:latest}
+    restart: unless-stopped
+    env_file: relay.env
+    environment:
+      MIKRO_ORM_HOST: mysql
+      MIKRO_ORM_PORT: "3306"
+      PORT: "3003"
+      USE_SSL: "false"
+    expose:
+      - "3003"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file: relay.env
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  caddy_data:
+  caddy_config:
+  mysql_data:
